@@ -1,0 +1,50 @@
+{
+  "identifier": "org.zowe.tsterm",
+  "apiVersion": "1.0.0",
+  "pluginVersion": "0.0.1",
+  "pluginType": "application",
+  "license": "EPL-2.0",
+  "author": "Zossteam",
+  "homepage": "https://github.com/JoeNemo",  
+  "webContent": {
+    "framework": "angular2",
+    "launchDefinition": {
+      "pluginShortNameKey": "TSTerm",
+      "pluginShortNameDefault": "TSTerm",
+      "imageSrc": "assets/joe.png"
+    },
+    "descriptionKey": "TN3270 Description",
+    "descriptionDefault": "Open TN3270 Emulator",
+    "defaultWindowStyle": {
+      "width": 800,
+      "height": 600
+    }
+  },
+  "configurationData": {
+    "resources": {
+      "sessions": {
+        "locationType": "relative",
+        "aggregationPolicy": "override"
+      }
+    }
+  },
+  "dataServices": [
+    {
+      "type": "import",
+      "localName": "terminalstream",
+      "sourceName": "tn3270data",
+      "sourcePlugin": "org.zowe.terminal.proxy",
+      "versionRange": "^1.0.0"
+    },
+    {
+      "type": "service",
+      "name": "statediscovery",
+      "initializerLookupMethod": "internal",
+      "initializerName": "zosDiscoveryServiceInstaller",
+      "methods": [
+        "GET"
+      ],
+      "version": "1.0.0"
+    }
+  ]
+}

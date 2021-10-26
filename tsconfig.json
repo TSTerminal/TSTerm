@@ -1,0 +1,43 @@
+{
+    // TopLevel: files, extends, include, exclude and references
+    "compileOnSave": false,
+    /*
+      "files": [
+      ],
+    */
+    "include": [
+	"src/**/*.ts"
+    ],
+    "compilerOptions": {
+	"allowUnreachableCode": false,
+	"baseUrl": "..", // Lets you set a base directory to resolve non-absolute module names.
+	"strict": true, // maybe too annoying?? 
+	"sourceMap": true,
+	"module": "ES6", // "AMD" is what Grafana uses for plugins (but only sort-of)
+	"moduleResolution": "node",
+	"jsx": "react",
+	// "outFile": "module.js",
+	// moduleResolution: Node/Classic
+	"allowSyntheticDefaultImports": true, // because that's the way the Grafana guys wrote their code.  Grrr.
+	"declaration": false,
+	"target": "ES2019",
+	"lib": [ "ES2019", "DOM" ],
+	"paths": {
+	    // A series of entries which re-map imports to lookup locations relative to the baseUrl,
+	    // there is a larger coverage of paths in the handbook.
+	    // See: https://www.typescriptlang.org/tsconfig
+	    //
+	    // Maybe use this to find Grafana Github repos
+	    
+	},
+	// rootDir // longest comm path of all non-declaration input files.
+	// defaults to directory containing tsconfig otherwise.
+	// rootDirs is also available
+	// "typeRoots": [ "./funk" ],
+	// "typeRoots": [ "./typings" <etc>]
+	// Default is all visible "@types" packages are included.
+	//   - that means node_modules/@types of any enclosing folder is visible
+	// use "types" to further restrict sub dirs of node_modules/@types to specific subdirs
+	
+    }
+}
