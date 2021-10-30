@@ -431,12 +431,16 @@ export class VirtualScreen {  // all terminal types, minified as ko
     mi:any;  // not declared originally
     callbacks:any; // not declared originally
     id:any; // not declared originally
-    Pl:any;  // some sort of callback if used
-    _l:boolean; // isInsertMode (drives cursor drawing and other things - and should be abstracted better
+    inInsertMode:boolean = false; // inInsertMode (drives cursor drawing and other things - and should be abstracted better
     zi:any;     // mobile browser info
     contextRightClick:any; // this exists in minified code, but I really don't know what it does
-
+    Ft:any;  // poorly understood, has to do with fonts
     size:number;
+    ee:any; // some mouse handling timeout,
+    re?:HTMLElement;  // this.re is only mentioned in a trivial part of an event handler
+                      // and probably can be eliminated
+    we?:HTMLElement;  // more trivial dead stuff
+    resizeTimeoutID:any; // this was a global/state "go", but that was ridiculous
     
     constructor(width:number, height:number){
 	this.canvas = null;
@@ -476,6 +480,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	this.li = 0;
 	this.ni = !1;
 	this.ii = ["Reset"];
+	
 	this.attentionSound = Sounds.sound1;
 	// saw evidence of dynamic property "this.id" in method
 	this.shortName = "a"; // is called .wi
@@ -511,6 +516,16 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	this.shortName || (this.shortName = " ");
 	this.longName = this.shortName;
     }
+
+    getCharsetInfo():CharsetInfo {
+	throw "Subclasses must implement getCharsetInfo()";
+    }
+
+    // some sort of user-alerting base method 
+    Pl(){
+	// do nothing
+    }
+
 
     pi(t:any){ // (ko.prototype.pi = function (t) {
 	this.Ai(4999, t.data, "Connection to host closed due to error.\nHost: " + this.bi.host +
@@ -620,8 +635,9 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	Utils.superClassWarning("connect");
     }
     
-    paste(t:any):void{ // (ko.prototype.Ri = function (t) {
+    paste(t:string):boolean{ // (ko.prototype.Ri = function (t) {
 	Utils.superClassWarning("paste");
+	return false;
     }
     
     copy(t:any):void{ // (ko.prototype.yi = function (t) {
@@ -634,6 +650,11 @@ export class VirtualScreen {  // all terminal types, minified as ko
     
     getScreenContents(t:any, l:any, n:any, i:any, e:any, s:any) {   // (ko.prototype.Ci = function (t, l, n, i, e, s) {
 	Utils.superClassWarning("getScreenContents");
+    }
+
+    yi(t:boolean,l:boolean):(string|null){ // lc.prototype.yi = function (t, l) {
+	Utils.superClassWarning("yi");
+	return null;
     }
     
     setCursorPos(position:number):boolean{ // (ko.prototype.Ni = function (t) {
@@ -676,7 +697,9 @@ export class VirtualScreen {  // all terminal types, minified as ko
     
     handleContainerResize(parentDiv:HTMLElement, t?:number, n?:number){ // (ko.prototype.handleContainerResize = function (parentDiv, t, n) {
 	Utils.coreLogger.info("handling resize");
-	clearTimeout(go);   // JOE is this insane global use of go really intentional, wow!!
+	if (this.resizeTimeoutID){
+	    clearTimeout(this.resizeTimeoutID);   // JOE is this insane global use of go really intentional, wow!!
+	}
 	var i = t || parentDiv.clientWidth,
             e = n || parentDiv.clientHeight;
 	this.parentDiv = parentDiv;
@@ -696,7 +719,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	     this.renderer.handleResize());
 	}
 	var s = this;
-	go = setTimeout(function () {
+	this.resizeTimeoutID = setTimeout(function () {
             s.Li();
 	}, 200);
     }
@@ -815,7 +838,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	return { canvas: this.canvas, Il: this.selectionCanvas, Pe: this.textAreaOverlay };
     }
     
-    resize(width:number, height:number, suppressRedraw:boolean) { // (ko.prototype.resize = function (t, n, i) {
+    resize(width:number, height:number, suppressRedraw?:boolean) { // (ko.prototype.resize = function (t, n, i) {
 	this.width = width;
 	this.height = height;
 	this.size = width * this.height;
@@ -870,7 +893,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
             if (0 === this.Qn || 256 === this.Qn) {
 		if (!this.ni && ["Shift", "Control", "Alt"].includes(bestKeyName)) { // NEEDSWORK .ni
                     var i = this.keyboardMap[event.code];
-                    i && i[0] && i[0].type && (!this.Xn || (this.ii && this.ii.includes(i[0].value))) && this.Wi(i[0], event);
+                    i && i[0] && i[0].type && (!this.Xn || (this.ii && this.ii.includes(i[0].value))) && this.handleKey(i[0], event);
 		}
 		this.ni = !1;
             }
@@ -878,11 +901,6 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	    event.preventDefault();
 	    logger.debug("keyup, modifier state is now " + this.Qn.toString(2));
 	}
-    }
-    
-    // overriden in paged.js
-    handleKey(typeValuePair:TypeValuePair,l:any):void { // (ko.prototype.Wi = function (t, l) {
-	Utils.superClassWarning("handleKeyDown");
     }
     
     Qi(event:KeyboardEvent):void { // (ko.prototype.Qi = function (t) {
@@ -994,7 +1012,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	console.log("override me");
     }
     
-    hi(commandText:string):void{ // (ko.prototype.Hi = function (t) {
+    runCommand(commandText:string):void{ // (ko.prototype.Hi = function (t) {
 	if (commandText && "string" == typeof commandText) {
             var l = commandText.toLowerCase();
             document.execCommand(l);
@@ -1027,7 +1045,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	return (l = l.replace(/ ([\+\-\.\d])/g, "\t$1")), l;
     }
     
-    $i(t:string):string{ // (ko.prototype.$i = function (t) {
+    cleanString(t:string):string{ // (ko.prototype.$i = function (t) {
 	return this.Hn ? t.trim().replace(/\t/g, " ") : t;
     }
     
@@ -1065,17 +1083,21 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	    this.Tl = n.rows;
 	}
     }
+
+    handleKey(typeValuePair:TypeValuePair,l:KeyboardEvent):void { // (Oo.prototype.Wi = function (t, l) {
+	Utils.superClassWarning("handleKey");
+    }
     
     // overridden in model3270
     handleClick(offsetX:number, offsetY:number,
 		coords:any,
-		screenPos?:number): void { // (ko.prototype.se = function (t, l, n, i) {
-	Utils.superClassWarning("handleClick");
+		screenPos:number): void { // (ko.prototype.se = function (t, l, n, i) {
+	
     }
     
     handleTripleClick(offsetX:number, offsetY:number,
 		      coords:any,
-		      screenPos?:number):void { // (ko.prototype.ue = function (t, l, n, i) {
+		      screenPos:number):void { // (ko.prototype.ue = function (t, l, n, i) {
 	Utils.superClassWarning("handleTripleClick");
     }
     
@@ -1116,9 +1138,13 @@ export class VirtualScreen {  // all terminal types, minified as ko
 
     // overridden in model3270, too
     // problem with number of arguments
-    handleDoubleClick(event:MouseEvent):void { // (ko.prototype.oe = function (t) {
+    handleDoubleClick(x:number,
+		      y:number,
+		      coords:any,
+		      screenPos:number,
+		      s?:any){ // (lc.prototype.oe = function (t, l, n, i) {
 	Utils.superClassWarning("handleDoubleClick");
-	Utils.eventLogger.debug("dblclick " + event);
+	Utils.eventLogger.debug("dblclick " + JSON.stringify(coords));
     }
     
     ce(e:any){ // (ko.prototype.ce = function (t) {
@@ -1137,6 +1163,18 @@ export class VirtualScreen {  // all terminal types, minified as ko
     
     de(t:number,l:number):number{ // (ko.prototype.de = function (t, l) {
 	return this.width * t + l;
+    }
+
+    ve(t:string):void { // created because no base class method was present
+	Utils.superClassWarning("ve");
+    }
+
+    handleWheel(event:WheelEvent):void { // created because no base class method was present
+	Utils.superClassWarning("handleWheel");
+    }
+
+    handleContextMenu(event:MouseEvent):void { // created because no base class method was present
+	Utils.superClassWarning("handleContextMenu");
     }
 
     establishMobileBrowserInfo():void{
@@ -1189,13 +1227,15 @@ export class VirtualScreen {  // all terminal types, minified as ko
 		eventLogger.debug("Copy, box region start=(" + screen.Sl + "," + screen.Tl +
 		    "), end=(" + screen.yl + "," + screen.Rl + ")");
 		event.stopPropagation();
-		let l = screen.yi(!1, !0); // NEEDSWORK
-		l = screen.Xi(l);
-		if (null != l) {
-		    if (event.clipboardData){ // I don't think this really can be null, but I am not the compiler!
-			event.clipboardData.setData("text/plain", l);
+		let l:string|null = screen.yi(!1, !0); // NEEDSWORK
+		if (l){
+		    l = screen.Xi(l);
+		    if (null != l) {
+			if (event.clipboardData){ // I don't think this really can be null, but I am not the compiler!
+			    event.clipboardData.setData("text/plain", l);
+			}
+			event.preventDefault();
 		    }
-		    event.preventDefault();
 		}
 		postEventCleanup();
             }
@@ -1208,8 +1248,8 @@ export class VirtualScreen {  // all terminal types, minified as ko
 		event.stopPropagation();
 		eventLogger.debug("PASTE: Found types: "+event.clipboardData?.types);
 		let l = (event.clipboardData ? event.clipboardData.getData("text/plain") : "");
-		l = screen.$i(l);
-		if (l && !0 === screen.Ri(l)) {
+		l = screen.cleanString(l);
+		if (l && !0 === screen.paste(l)) {
 		    event.preventDefault();
 		}
 		postEventCleanup();
@@ -1284,15 +1324,16 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	    });
 	    // GURU why close the connection only on textArea unload, what about the rest of the world?
 	    textArea.addEventListener("unload", function (event) {
-		screen.closeConnection();
+		screen.closeConnection(4e3, "Terminal Closed"); // JOE - maybe something more specific
 	    });
-	    textArea.addEventListener("wheel", function (event:any) {
+	    textArea.addEventListener("wheel", function (eventArg:any) {
+		let event:WheelEvent = (eventArg as WheelEvent); // a subclass of MouseEven;
 		if (screen.scriptIsRunning){
-		    eventLogger.debug("Script in progress: rejecting keydown");
+		    eventLogger.debug("Script in progress: rejecting wheel event");
 		    event.stopPropagation();
 		    event.preventDefault();
 		} else {
-		    screen.pe(event); // NEEDSWORK .pe
+		    screen.handleWheel(event); // NEEDSWORK .pe
 		}
 	    }),
 	    textArea.addEventListener("keydown", function (eventArg:any) {
@@ -1462,7 +1503,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 			eventLogger.debug("mouse event " + event + " target=" + event.target);
 			let targetElement:HTMLElement = event.target as HTMLElement;
 			targetElement.focus();
-			screen.Ae(event); // NEEDSWORK .Ae
+			screen.handleContextMenu(event); // NEEDSWORK .Ae
 		    }
 		} else if (null != screen.Sl && null != screen.yl) { // NEEDSWORK .Sl .yl
 		    let textArea = screen.textAreaOverlay;
@@ -1561,8 +1602,8 @@ export class BaseRenderer {   // minified as Ea
 			   virtualScreen.Ft.pt :
 			   CharsetInfo.DEFAULT_FONT_FAMILY);
 	Utils.coreLogger.debug("virtualScreen = " + virtualScreen);
-	Utils.coreLogger.debug("charsetInfo=" + virtualScreen.It); // virtualScreen.It not in base VirtualScreen , hope it's in 3270
-	this.nl = virtualScreen.It;
+	this.nl = virtualScreen.getCharsetInfo().font;
+	Utils.coreLogger.debug("charsetInfo: font(nl)=" + this.nl); // virtualScreen.It not in base VirtualScreen , hope it's in 3270
 	this.fontsNOTReady = true; // this.Dt = true; // boolean a backwards boolean, go figure
 	this.scaleH = 1; // min'd as this.xt = 1;
 	this.scaleV = 1; // min'd as this.Ot = 1;
@@ -1759,7 +1800,7 @@ export class BaseRenderer {   // minified as Ea
                 this.fontSize = l;
 		BaseRenderer.fontSize = l;
             }
-            t.scaleMethod && null !== t.scaleMethod && ((this.scaleMethod = t.scaleMethod), 1 == this.scaleMethod && (BaseRenderer.fontSize = 10)), this.sl(), this.ul();
+            t.scaleMethod && null !== t.scaleMethod && ((this.scaleMethod = t.scaleMethod), 1 == this.scaleMethod && (BaseRenderer.fontSize = 10)), this.sl(), this.fullPaint();
         }
     }
 
@@ -2023,7 +2064,7 @@ export class BaseRenderer {   // minified as Ea
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.clearRect(0, 0, this.activeWidth, this.activeHeight);
         if ((this.hasFocus === true) &&
-	    (3 != this.Vt || 0 == this.zt || 1 == this.Kt) &&
+	    (3 != this.Vt || 0 == this.timerDelay || 1 == this.Kt) &&
 	    (this.Vt > 0)){
 	    this.showTheCursor(ctx, screen.cursorPos);
 	}
@@ -2035,11 +2076,11 @@ export class BaseRenderer {   // minified as Ea
 	}
         if (1 == screen.oiaEnabled){
             this.Nl(ctx, screen, function () {
-                "function" == typeof screen.Pl && screen.Pl();
+                screen.Pl();
             });
 	}
     }
-
+    
     // drawOIA
     Nl(ctx:CanvasRenderingContext2D, screen:VirtualScreen, callAfter:any):void{ // Ea.prototype.Nl = function (t, l, n) {
         let canvas:HTMLCanvasElement = screen.getCanvasOrFail();
@@ -2123,7 +2164,7 @@ export class BaseRenderer {   // minified as Ea
 	    var canvas:HTMLCanvasElement = i.getCanvasOrFail();
             var e:number = this.charHeight;
             var s:number = this.charWidth;
-            var u:number = this.screen._l ? 0.2 : 1;
+            var u:number = this.screen.inInsertMode ? 0.2 : 1;
             if (0 != i.width) {
                 var h:number = Math.floor(n / i.width) + 1;
                 var r:number = n % i.width;

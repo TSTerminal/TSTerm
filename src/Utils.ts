@@ -47,6 +47,41 @@ export class ComponentLogger {
     }
 }
 
+export class Exception {
+    message:string;
+    name:string;
+
+    constructor(message:string,name:string){
+	this.message = message;
+	this.name = name;
+    }
+
+    static runtimeException(message:string) { // To
+	let e = new Exception(message,"RuntimeException");
+	Utils.coreLogger.warn("Encountered exception:" + this.name + ", msg:" + message);
+	return e;
+    }
+
+    static exception(message:string) { // Ro
+	let e = new Exception(message,"Exception");
+	Utils.coreLogger.warn("Encountered exception:" + this.name + ", msg:" + message);
+	return e;
+    }
+
+    static terminalInputException(message:string) { // yo
+	let e = new Exception(message,"TerminalInputException");
+	Utils.coreLogger.warn("Encountered exception:" + this.name + ", msg:" + message);
+	return e;
+    }
+
+    static unsuppotedOperationException(message:string) { // Co
+	let e = new Exception(message,"UnsupportedOperationException");
+	Utils.coreLogger.warn("Encountered exception:" + this.name + ", msg:" + message);
+	return e;
+    }
+}
+
+
 export class Utils {
     static defaultGlobalLogger:ComponentLogger;
 
@@ -54,7 +89,32 @@ export class Utils {
 	return (x || 0 === x) ? x.toString(16) : "<FAIL: Not A Number>";
     }
 
-    static hexDump(byteArray:any[], logger:ComponentLogger, offsetArg?:number, lengthArg?:number){ // Lh = function (t, n, i, e) {
+    static hexDump(byteArray:number[], logger:ComponentLogger, offsetArg?:number, lengthArg?:number){ // Lh = function (t, n, i, e) {
+        var s = 0; // iteration index
+        var offset = offsetArg || 0;  // u
+        var length  = lengthArg || byteArray.length; // h
+        var r = "";
+        for (s = 0; s < length; s++){
+	    r += Utils.hexString(byteArray[offset + s]) + " ";
+	    if (s % 16 == 15){
+		if (logger && logger.debug){
+		    logger.debug(r);
+		} else{
+		    Utils.defaultGlobalLogger.debug(r);
+		}
+		r = "";
+	    }
+	}
+	if (r.length > 0){
+	    if (logger && logger.debug){
+		logger.debug(r);
+	    } else {
+		Utils.defaultGlobalLogger.debug(r);
+	    }
+	}
+    }
+
+    static hexDumpU8(byteArray:Uint8Array, logger:ComponentLogger, offsetArg?:number, lengthArg?:number){ // Lh = function (t, n, i, e) {
         var s = 0; // iteration index
         var offset = offsetArg || 0;  // u
         var length  = lengthArg || byteArray.length; // h
@@ -98,6 +158,7 @@ export class Utils {
     //static to = window.COM_RS_COMMON_LOGGER.makeComponentLogger("org.zowe.terminal.core.parse");
     static parseLogger:ComponentLogger =  new ComponentLogger("TN3270Parse").setLevel(4);
 
+    // l
     static coreLogger:ComponentLogger = new ComponentLogger("TerminalCore").setLevel(4); // should match to org.zowe.terminal.core
     
     //Sr = window.COM_RS_COMMON_LOGGER.makeComponentLogger("org.zowe.terminal.core.render"),
@@ -135,6 +196,25 @@ export class Utils {
 
 
     static base64Encode(t:number[]):string { // minified as Qh(t)
+	let encodeArray = Utils.b64EncodeArray;
+	for (var l = [], n = t.length, i = Math.floor(n / 3), e = n - 3 * i, s = 0, u = 0; u < i; u++) {
+            let n = 255 & t[s++],
+		i = 255 & t[s++],
+		e = 255 & t[s++];
+            l.push(encodeArray[n >> 2]), l.push(encodeArray[((n << 4) & 63) | (i >> 4)]), l.push(encodeArray[((i << 2) & 63) | (e >> 6)]), l.push(encodeArray[63 & e]);
+	}
+	if (0 != e) {
+            let n = 255 & t[s++];
+            if ((l.push(encodeArray[n >> 2]), 1 == e)) l.push(encodeArray[(n << 4) & 63]), l.push(61), l.push(61);
+            else {
+		let i = 255 & t[s++];
+		l.push(encodeArray[((n << 4) & 63) | (i >> 4)]), l.push(encodeArray[(i << 2) & 63]), l.push(61);
+            }
+	}
+	return String.fromCharCode.apply(null, l);
+    }
+
+    static base64EncodeU8(t:Uint8Array):string { // minified as Qh(t)
 	let encodeArray = Utils.b64EncodeArray;
 	for (var l = [], n = t.length, i = Math.floor(n / 3), e = n - 3 * i, s = 0, u = 0; u < i; u++) {
             let n = 255 & t[s++],

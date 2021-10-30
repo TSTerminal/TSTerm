@@ -5,7 +5,7 @@ export class ScreenElement { // was Io
     position:number;
     ebcdicChar:number;
     fieldData:FieldData|null;
-    isGraphic:boolean;
+    isGraphic:boolean; // was this.fn
     charAttrs:CharacterAttributes|null;
     isModified:boolean;
     inputChar:number;
@@ -154,6 +154,10 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	Utils.coreLogger.debug("charset info set to " + this.charsetInfo.name + " font=" + this.charsetInfo.font);
     }
 
+    getCharsetInfo():CharsetInfo {
+	return this.charsetInfo;
+    }
+
     Ql(t:number){ // (Oo.prototype.Ql = function (t) {
 	if (8364 == t && this.charsetInfo.St > 0) {
 	    return this.charsetInfo.St;
@@ -175,8 +179,9 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	}
 	return -1;
     }
-    
-    Ve(t:string, l:boolean, n:number){ // (Oo.prototype.Ve = function (t, l, n) {
+
+    // the third argument and its type are confusing
+    Ve(t:string, l:boolean, n:any):number[]{ // (Oo.prototype.Ve = function (t, l, n) {
 	for (var i = l, e = [], s = 0; s < t.length; s++) {
             var u = t.charCodeAt(s),
 		h = this.Ql(u);
@@ -215,13 +220,18 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	alert("In the superclass!");
     }
 
+    handleWheel(event:WheelEvent):void { 
+	// do nothing
+    }
+
+
     // declare with two args here, but one in the parent class, grrrrr
     enterCharacterAtCursor(t:number,l?:any):boolean{ // (Oo.prototype.Fi = function (t, l) {
 	alert("In the superclass!");
 	return false;
     }
 
-    getScreenElemenRowColumn(row:number, column:number):(ScreenElement|null) { // (Oo.prototype.Ye = function (t, l) {
+    getScreenElementRowColumn(row:number, column:number):(ScreenElement|null) { // (Oo.prototype.Ye = function (t, l) {
 	return this.screenElements[row * this.width + column];
     }
 
@@ -247,8 +257,9 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
     modifyCursorPos(delta:number){ // (Oo.prototype.Pi = function (t) {
 	this.setCursorPos(this.cursorPos + delta);
     }
-    
-    handleFunction(t:any):boolean{ // (Oo.prototype.Je = function (t) {
+
+    // ugly return declaration
+    handleFunction(t:string):boolean|undefined{ // (Oo.prototype.Je = function (t) {
 	Utils.superClassWarning("handleFunction");
 	return false;
     }
@@ -296,7 +307,7 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	return !1;
     }
     
-    handleKey(typeValuePair:TypeValuePair,l:any):void { // (Oo.prototype.Wi = function (t, l) {
+    handleKey(typeValuePair:TypeValuePair,l:KeyboardEvent):void { // (Oo.prototype.Wi = function (t, l) {
 	if (8 === typeValuePair.type && 1 === typeValuePair.value.length && this.Qn & this.Le){
 	    Utils.keyboardLogger.warn("Rejecting FALLBACK keydown, value=" + typeValuePair.value +
 		    ", because modifierKeyState=" + this.Qn + ", which leads to undefined behavior");
@@ -336,7 +347,7 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
             let nn = (position - l) % this.size;
             nn < 0 && (nn = this.size + nn);
             const element = this.screenElements[nn];
-            if (element && null != element.z){
+            if (element && null != element.fieldData){
 		return element.fieldData;
 	    }
         }
@@ -366,9 +377,9 @@ export class PagedRenderer extends BaseRenderer {  // minified as ka
     
     
     
-    constructor(canvas:HTMLCanvasElement, virtualScreen:VirtualScreenArg, unicodeTable:any){
+    constructor(canvas:HTMLCanvasElement|null, virtualScreenArg:VirtualScreen, unicodeTable:any){
 	super(virtualScreenArg,unicodeTable);
-	let virtualScreen = virtualScreen as PagedVirtualScreen;
+	let virtualScreen = virtualScreenArg as PagedVirtualScreen;
 	this.canvas = canvas;
 	this.screen = virtualScreen;
 	this.yt = -1;
@@ -381,17 +392,18 @@ export class PagedRenderer extends BaseRenderer {  // minified as ka
 			   CharsetInfo.DEFAULT_FONT_FAMILY);
 	Utils.coreLogger.debug("virtualScreen = " + virtualScreen);
 	Utils.coreLogger.debug("charsetInfo=" + virtualScreen.charsetInfo);
-	this.nl = virtualScreen.charsetInfo.pt;
-	this.Dt = true;
-	this.scaleH = 1;  // this.xt
-	this.scaleV = 1;  // this.Ot
-	this.activeWidth = -1; // this.Ut = -1;
-	this.activeHeight = -1; // this.Mt = -1;
-	this.charWidth = 1;  // this.Lt = 1;
-	this.charHeight = 1; // this.Bt = 1;
-	this.ascent = 1; // this._t = 1;  // charAscent   from debug string
-	this.descent = 0; // was this.rl
-	this.leading = 0; // this.Wt = 0;  // charLeading, from debug string  // see "rl" too but not in Ea, hmmm
+	this.nl = virtualScreen.charsetInfo.font;
+	// these are initialized in parent class exactly the same way
+	//this.Dt = true;
+	//this.scaleH = 1;  // this.xt
+	//this.scaleV = 1;  // this.Ot
+	//this.activeWidth = -1; // this.Ut = -1;
+	//this.activeHeight = -1; // this.Mt = -1;
+	//this.charWidth = 1;  // this.Lt = 1;
+	//this.charHeight = 1; // this.Bt = 1;
+	//this.ascent = 1; // this._t = 1;  // charAscent   from debug string
+	//this.descent = 0; // was this.rl
+	//this.leading = 0; // this.Wt = 0;  // charLeading, from debug string  // see "rl" too but not in Ea, hmmm
 	this.Qt = 0;
 	this.unicodeTable = unicodeTable; // was this.Gt = i;
 	this.jt = 0;
@@ -423,7 +435,8 @@ export class PagedRenderer extends BaseRenderer {  // minified as ka
     }
 
     // an override, but what is different
-    Al(t, l, n, i, e, s) { // ka.prototype.Al = function (t, l, n, i, e, s) {
+    Al(t:any[], l:any[], n:any[], i:number, e:number, s:any) { // ka.prototype.Al = function (t, l, n, i, e, s) {
+	let ea = BaseRenderer.ea;
         for (var u = e + 1, h = t[e], r = l[e], a = n[i + e]; u < s && (h == ea ? t[u] == ea : h == t[u]) && r == l[u] && a == n[i + u]; ) u++;
         return u - e;
     }
