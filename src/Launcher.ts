@@ -28,7 +28,7 @@ export class TerminalLauncher{
     }
 
     static start3270 = function (screenParms:any, // { parentDiv: width: w height: h } html params was t
-				 cnxnSettings:any, // n,
+				 cnxnSettings:any, // n, includes charsetName
 				 i:any,  // has contextRightClick and keyboardMappings
 				 callbacks:any, // a js object with k-v paairs
 				 additionalScreenProperties:any) {   // "e" clone-copy from this if supplied
@@ -42,17 +42,17 @@ export class TerminalLauncher{
 	screen.callbacks = callbacks;
 	screen.Ne();  // sets up callbacs
         screen.na = cnxnSettings;
-	// Joe doesn't like the follwing minfication
+	// Joe doesn't like the follwing minification
         // (h.enableTN3270E = void 0 === cnxnSettings.enableTN3270E || cnxnSettings.enableTN3270E),
 	screen.enableTN3270E = cnxnSettings.enableTN3270E;
 	if (null != i){
 	    screen.zn = i;
-	    screen.Kn = i.keyboardMappingVS;
+	    screen.keyboardMap = i.keyboardMappingVS;
 	    screen.contextRightClick = i.contextRightClick;
 	}
 	if ((cnxnSettings.charsetName &&
-	     ("string" == typeof n.charsetName))){
-	    screen.setCharsetInfo(n.charsetName);
+	     ("string" == typeof cnxnSettings.charsetName))){
+	    screen.setCharsetInfo(cnxnSettings.charsetName);
 	}
 	if (cnxnSettings.deviceType && "number" == typeof cnxnSettings.deviceType){
             switch (cnxnSettings.deviceType) {
@@ -108,10 +108,12 @@ export class TerminalLauncher{
         if (cnxnSettings.connect){
 	    screen.connect(cnxnSettings.url, screen.bi);
 	} else {
-	    screen.Zn = true;
+	    screen.scriptIsRunning = true;
 	}
         screen.buildEventHandlers();
-        screen.canvas.focus();
+	if (screen.canvas){ // JOE - will be non-null
+            screen.canvas.focus();
+	}
         if (screen.callbacks && ("function" == typeof screen.callbacks.onInit)){
 	    screen.callbacks.onInit();
 	}

@@ -58,7 +58,7 @@ export class ScreenElement { // was Io
 
 export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and maybe other stuff, minified as Oo
     websocket:WebSocket|null;
-    screenElements:ScreenElement[];
+    screenElements:(ScreenElement|null)[];
     isFormatted:boolean;   // That is, are the fields known
     fieldDataMap:any;
     bufferPos:number;
@@ -181,14 +181,22 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
     }
 
     // the third argument and its type are confusing
-    Ve(t:string, l:boolean, n:any):number[]{ // (Oo.prototype.Ve = function (t, l, n) {
-	for (var i = l, e = [], s = 0; s < t.length; s++) {
+    Ve(t:string, l:boolean, n:boolean):number[]{ // (Oo.prototype.Ve = function (t, l, n) {
+	let i:boolean = l;
+	let e = [];
+	for (var s = 0; s < t.length; s++) {
             var u = t.charCodeAt(s),
 		h = this.Ql(u);
             Utils.keyboardLogger.debug("Getting DBCS for UTF. Given text code=0x" + Utils.hexString(u) + " ebcdic=0x" + Utils.hexString(h)),
-            null != h ? (u > 127 ? (0 == i && (e.push(14), (i = !0)), e.push((65280 & h) >> 8), e.push(255 & h)) : (!0 === i && (e.push(15), (i = !1)), e.push(h))) : e.push(64);
+            null != h ? (u > 127 ?
+		// Joe - replacing '0 == i' with '!i' for equivalent truthiness
+		(!i && (e.push(14), (i = !0)), e.push((65280 & h) >> 8), e.push(255 & h)) :
+		(!0 === i && (e.push(15), (i = !1)), e.push(h))) : e.push(64);
 	}
-	return 1 == n && !0 === i && e.push(15), e;
+	if (n && !0 === i){ // JOE - replaced "1 == n" with n because evaluates the same for truthiness
+	    e.push(15); // shift out
+	}
+	return e;
     }
     
     putScreenElement(position:number,screenElement:ScreenElement){ // (Oo.prototype.ze = function (t, l) {

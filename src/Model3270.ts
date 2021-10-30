@@ -106,7 +106,7 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
       the trace messages indicate this is VirtualScreen3270 generating some sort of read response
     */
 
-    cs(t){  // (Xo.prototype.cs = function (t) { -- not well understood yet
+    cs(t:CharacterAttributes3270){  // (Xo.prototype.cs = function (t) { -- not well understood yet
         if (null == t) return null;
         let l:any = {};
         let n:boolean = !1;
@@ -123,7 +123,7 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
             this.hn != t.hn && ((l[113] = t.hn), (n = !0)),
             this.rn != t.rn && ((l[114] = t.rn), (n = !0)),
             this.an != t.an && ((l[115] = t.an), (n = !0)),
-            n && !t.fs() && (l = { 0: 0 }),
+            n && !t.isNonDefault() && (l = { 0: 0 }),
             n ? l : null
         );
     }
@@ -217,7 +217,7 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
         case 255:
             return "FF White";
         default:
-            return "Unknown Color" + l;
+            return "Unknown Color" + color;
         }
     }
 
@@ -419,7 +419,7 @@ class Field {  // minified as Fo
     end:number;
     Ie?:number;  // poorly understood see note in method contains()
     
-    constructor(fieldData:FieldData, start:number, end:number){
+    constructor(fieldData:FieldData3270, start:number, end:number){
 	this.fieldData = fieldData; // was this.zl
 	this.start = start;
 	this.end = end;
@@ -437,6 +437,9 @@ class Field {  // minified as Fo
        But it doesn't appear to be called, which is good.
     */
     contains(position:number):boolean{ // (Fo.prototype.contains = function (t) {
+	if (!this.Ie){
+	    throw "Illegal State this.Ie is not set";
+	}
 	return this.Ie >= this.start && this.Ie < this.end;
     }
 
@@ -507,7 +510,7 @@ class TN3270EParser{  // minified as ic
     // and there is no reason for this duplication.  It's probably
     // a vestige of an ancient factoring that missed some details
     usingAlternateSize:boolean;
-    currentPartitionID:number;
+    currentPartitionID:number = 0; // JOE - I think this is OK for initial state
     partitionState:number;
     partitionInfoMap:any;
 
@@ -854,7 +857,7 @@ class TN3270EParser{  // minified as ic
 		this.addTelnetResponse(TN3270EParser.DO, b);
 		break;
             case TN3270EParser.OPTION_TN3270E:
-		if (this.enableTN3270E){
+		if (this.screen.enableTN3270E){ // JOE originally said this.enableTN3270E which is nuts
 		    this.screen.convoType = VirtualScreen3270.convoTypes.LULU;
 		    console.log("JOE postload going TN3270E");
 		    this.screen.inTN3270EMode = true;
@@ -927,7 +930,7 @@ class TN3270EParser{  // minified as ic
 			    logger.severe("No device type defined, cannot respond to telnet sub");
 			}
                     } else {
-			logger.warn("Requested to send 0x" + Utils.toString(s) + " but unknown type");
+			logger.warn("Requested to send 0x" + Utils.hexString(s) + " but unknown type");
 		    }
 		    nextState = 0;
 		    break;
@@ -1591,7 +1594,7 @@ class TN3270EParser{  // minified as ic
 		this.usingAlternateSize = 0 != (128 & eraseResetFlags); // use alternate size
 		this.currentPartitionID = 0;
 		this.partitionState = 0; // this.Os = 0
-		this.partitionInfoMap = { 0: { amode: false, size: this.size } };
+		this.partitionInfoMap = { 0: { amode: false, size: this.screen.size } }; // JOE - was this.size
 		this.screen.handleErase(false, this.usingAlternateSize);
 		logger.debug("StructuredField: ERASE/RESET current partition ID=" + this.currentPartitionID);
 		logger.debug("StructuredField: ERASE/RESET current partition state=" + this.partitionState);
@@ -1717,9 +1720,11 @@ class TN3270EParser{  // minified as ic
 		    // parse write does not return values, so this and all of its friends
 		    // are weird
 		var M = this.parseWrite(t, D, D + x, partitionID, eraseFirst, true, false);
-		if (M){
-		    Q.Qh = M;
-		}
+		/* JOE: void is falsy as far as I can tell so this doesn't do anything
+		   if (M) {
+                   Q.Qh = M; 
+		   }
+		*/
 		order.xe.push(Q);
 		break;
             case TN3270EParser.STRFLD_INBOUND_3270_DATA_STREAM:
@@ -1860,7 +1865,7 @@ class TN3270EParser{  // minified as ic
 		 wcc: e };
     }
 
-    parseObjectData(data:number,
+    parseObjectData(data:number[],
 		    l:number, // probably start and indices
 		    n:number,
 		    structuredFieldType:number,
@@ -1938,7 +1943,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     usingAlternateSize:boolean;
 
     convoType:number;
-    ipAddress:string; // was this.Xh
+    ipAddress:string|null = null; // was this.Xh
 
     // poorly understood stuff
     Ts:number; // bound, not used, I think.
@@ -2579,8 +2584,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                     l && "string" == typeof l && ((e = l.charAt(i)), e && (t[n--] = e.charCodeAt(0))), l && "object" == typeof l && ((e = l[i]), e && (t[n--] = e));
 		}
             }
-            var e,
-		s,
+            let e:string = ""; // JOE: Maybe an oversimplification, but a good one!
+	    var s,
 		u = this.Te(this.cursorPos),
 		h = 1 === String(u.row).length ? "0" + u.row.toString() : u.row.toString();
             for (
@@ -2603,9 +2608,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     clear(){ // (lc.prototype.clear = function () {
 	this.screenElements = new Array(this.size);
-	if (this.screenElements.fill){
-	    this.screenElements.fill(null);
-	}
+	this.screenElements.fill(null);
 	this.isFieldDataMapCached = false;  // was this.Ue
 	this.isFormatted = false; 
 	this.fieldDataMap = {};    
@@ -2649,7 +2652,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	if (this.oiaEnabled && this.oiaLine){
 	    this.Cu = null;
 	    this.Pu(),
-	    this.renderer.ml();
+	    (this.renderer && this.renderer.ml());
 	}
     }
 
@@ -2767,8 +2770,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     clearCachedFieldInfo(){ //(lc.prototype.ju = function () {
         var t;
         for (t = 0; t < this.size; t++) {
-	    if (this.screenElements[t]){
-		this.screenElements[t].field = null;
+	    let screenElement = this.screenElements[t];
+	    if (screenElement != null){
+		screenElement.field = null;
 	    }
 	}
         this.isFieldDataMapCached = false;
@@ -2795,7 +2799,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		if (null != e.fieldData){
 		    if (positionOfFirstFieldData == -1) positionOfFirstFieldData = u;
 		    i = (u + 1) % size;
-		    mostRecentField = new Field(e.fieldData, i, i);
+		    mostRecentField = new Field((e.fieldData as FieldData3270), i, i);
 		    e.field = mostRecentField;
 		} else if (positionOfFirstFieldData != -1){
 		    e.field = mostRecentField;
@@ -2854,7 +2858,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    if (2 !== this.Cu){
 		this.ku();   // NEEDSWORK .ku
 	    }
-	    this.renderer.ml();  // NEEDSWORK - but stubbed impl in place
+	    if (this.renderer){
+		this.renderer.ml();  // NEEDSWORK - but stubbed impl in place
+	    }
 	}
     }
     
@@ -3318,7 +3324,11 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		    JSON.stringify(this.Vs));
 	if (n && !0 === this.Me && !this.Vs.zs) { // INTERIM .Vs
 	    console.log("JOE: maybe processing enter 1");
-            if (126 === n && !(n = this.er())) return;
+	    let temp:number|null = null;
+            if (126 === n && !(temp = this.er())){
+		return;
+	    }
+	    n = (temp as number);
 	    console.log("JOE: maybe processing enter 2");
             if (VirtualScreen3270.ih.indexOf(n) > -1 && !this.sr()) return;
 	    console.log("JOE: maybe processing enter 3");
@@ -3381,7 +3391,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     kr(){ // (lc.prototype.kr = function () {
-	const field = this.screenElements[this.cursorPos] && this.screenElements[this.cursorPos].field;
+	let element = this.screenElements[this.cursorPos];
+	const field = element && element.field;
 	return (!(!field || !field.fieldData.isEditable() || this.cursorPos < field.start) ||
 		(Utils.keyboardLogger.warn("Attempted to write in uneditable field"),
 		 this.Su(1),
@@ -3608,13 +3619,16 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	if (-1 == s) {
             let t = 0 == i ? this.size - 1 : (i - 1) % this.size,
 		l = this.screenElements[t];
-            64 == l.charToDisplay() && (s = t);
+            (l && ( 64 == l.charToDisplay())) && (s = t); // JOE added non-null check
 	}
 	if (-1 == s) return false;
 	for (let ll = s; ll != t; ll--) {
             e = ll % this.size;
             let tt = this.screenElements[e];
 	    let nn = 0 == e ? this.screenElements[this.size - 1] : this.screenElements[e - 1];
+	    if (!nn){
+		throw "Illegal State: screenElement is null";
+	    }
 	    let ii = nn.charToDisplay();
             if (tt){
 		tt.inputChar = ii;
@@ -3702,7 +3716,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     // called from handle function
-    er():number{ // lc.prototype.er = function () {
+    er():number|null{ // lc.prototype.er = function () {
 	if ((this.cacheFieldDataMap(), !this.isFormatted)) return 0;
 	{
             let t = this.getFieldData3270ByPosition(this.cursorPos, !0);
@@ -3723,7 +3737,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                     return t.setModified(), this.inInsertMode && (this.inInsertMode = !1), h;
 		}
 		return (e ^= 1), (i.inputChar = e), (i.isModified = !0), (this.Vs.Hs = !0), 1 & e ? t.clearModified() : t.setModified(), this.renderer && this.renderer.fullPaint(), 0;
-            }
+            } else {
+		return null;
+	    }
 	}
     }
 
@@ -3780,7 +3796,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     Cr(){ // (lc.prototype.Cr = function () {
-	const field = this.screenElements[this.cursorPos] && this.screenElements[this.cursorPos].field;
+	let element = this.screenElements[this.cursorPos];
+	const field = element && element.field;
 	if (field && field.fieldData.isEditable() && this.cursorPos >= field.start){
 	    this.mr(); // INTERIM .mr
 	}
@@ -3797,11 +3814,13 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     Pr(){ // lc.prototype.Pr = function () {
-	const t = this.screenElements[this.cursorPos] && this.screenElements[this.cursorPos].field;
+	let element = this.screenElements[this.cursorPos];
+	const t = element && element.field;
 	if (!t || this.cursorPos <= t.start || !t.fieldData.isEditable()) {
             let t = this.yr(this.cursorPos, !0);
             if (t) {
-		const l = this.screenElements[t].field;
+		const element2 = this.screenElements[t];
+		const l = element2 && element2.field;
 		l && ((t += l.fieldData.length - 1), Utils.protocolLogger.debug("Got editable field at " + t), this.setCursorPos(t), this.fu && this.mr());
             }
 	} else this.Nr();
@@ -3825,7 +3844,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	this.cacheFieldDataMap();
 	if (!this.isFormatted) return this.setCursorPos(0), void (this.renderer && this.renderer.ml());
 	var t = this.screenElements[this.cursorPos];
-	if (t.field && t.field.fieldData.isEditable()) {
+	if (t && t.field && t.field.fieldData.isEditable()) { // JOE: added null check on element t
             var l = this.Rr(this.cursorPos) + 1;
             if (this.cursorPos != l && this.cursorPos + 1 != l) return this.setCursorPos(l), void (this.renderer && this.renderer.ml());
 	}
@@ -4341,8 +4360,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                     a = -1 == r ? -1 : this.Jr(r + 1, 1, this.width - 2),
                     o = -1 == a ? -1 : this.Jr(a + 1, 1, this.width - 2);
 		logger.debug("titleDivider=" + r + " colTitleTop=" + a + " colBottom=" + o);
-		var c = [];
-		if (((t.columnInfos = c), -1 != o)) {
+		var c:any[] = [];
+		t.columnInfos = c;
+		if (-1 != o) {
                     var f,
                     d = 1,
 			w = -1;
@@ -4351,7 +4371,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                             s = this.screenElements[i + f];
 			if (162 != s.ebcdicChar) {
                             logger.debug("col sep at " + f + " char=0x" + Utils.hexString(s.ebcdicChar));
-                            var v = { index: c.length };
+                            var v:any = { index: c.length };
                             (v.name = this.Qr(a + 1, o - 1, d + 1, f - 1)),
                             e > d && e < f && (logger.debug("setting ccIx = " + c.length + " for column = " + e + " pos=" + n), (t.currentColumnIndex = c.length)),
                             c.push(v),
@@ -5059,6 +5079,10 @@ class QReply { // was nc
     static standardGraphicColorReply = [0, 4, 0, 1, 255, 0, 8, 0, 8, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 0, 3, 1, 1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 5, 0, 1, 1, 0, 0, 6, 1, 0, 1, 0, 0, 7, 1, 1, 1, 0]; // was xh
 }
 
+interface EbcdicUnicodePair {
+    ebcdicChar:number;
+    unicodeChar:number;
+}
 
 class Renderer3270 extends PagedRenderer {  // Minified as Ya
     Jl:number; // a fallback color
@@ -5137,7 +5161,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
 	return (r<<16)|(g<<8)|b;
     }
 
-    colorFromAttributes(charAttrs:CharacterAttributes3270){ // (Ya.prototype.en = function (t) {
+    colorFromAttributes(charAttrs:CharacterAttributes3270):number{ // (Ya.prototype.en = function (t) {
 	let logger = Utils.colorLogger;
         if ((0x0C & charAttrs.classicBits) == 0x0C){
 	    return Renderer3270.nullColor;
@@ -5159,7 +5183,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
             case FieldConstants.FIELD_ATTRIBUTE_INTENSIFIED_DETECTABLE:
                 return this.ln;
             default:
-                logger.warn("Reached default case for standard color attribute. Attribute=0x" + Utils.hexString(bits));
+                    throw "Reached default case for standard color attribute. Attribute=0x" + Utils.hexString(bits);
             }
         } else {
             switch (12 & bits) {
@@ -5169,7 +5193,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
             case FieldConstants.FIELD_ATTRIBUTE_INTENSIFIED_DETECTABLE:
                 return this.$l;
             default:
-                logger.warn("Reached default case for standard color attribute. Attribute=0x" + Utils.hexString(bits));
+                throw "Reached default case for standard color attribute. Attribute=0x" + Utils.hexString(bits);
             }
 	}
     }
@@ -5269,14 +5293,19 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
 	    0x2078, 0x2079, 0x0000, 0x236B, 0x2359, 0x235F, 0x234E, 0x0000];
 
     
-    static specialSubstitutionTable =   [  { ebcdicChar: 28, unicodeChar: 42 },
-					   { ebcdicChar: 30, unicodeChar: 59 },
-					   { ebcdicChar: 64, unicodeChar: 46 },
-					   { ebcdicChar: 0, unicodeChar: 176 }
-					];
+    static specialSubstitutionTable:EbcdicUnicodePair[] =   [  { ebcdicChar: 28, unicodeChar: 42 },
+							       { ebcdicChar: 30, unicodeChar: 59 },
+							       { ebcdicChar: 64, unicodeChar: 46 },
+							       { ebcdicChar: 0, unicodeChar: 176 }
+							    ];
 
-    static getSpecialSubstitute(c:number):any{
-	return Renderer3270.specialSubstitutionTable.find((x) => x.ebcdicChar === c).unicodeChar;
+    static getSpecialSubstitute(c:number):number{
+	let match = Renderer3270.specialSubstitutionTable.find((x) => x.ebcdicChar === c);
+	if (match){
+	    return match.unicodeChar;
+	} else {
+	    throw "Illegal State: no special substitute for "+c;
+	}
     }
     
     static isSpecialMark(c:number):boolean{
@@ -5352,7 +5381,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
         }
     }
     
-    getElementColor(element:ScreenElement,field:Field){ // (Ya.prototype.vn = function (t, l) {
+    getElementColor(element:ScreenElement,field:Field):number{ // (Ya.prototype.vn = function (t, l) {
 	let logger = Utils.colorLogger;
 	let nullColor = Renderer3270.nullColor;
         if (element == null) {
@@ -5372,9 +5401,13 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
         if (fieldCharAttrs != null && specificCharAttrs != null){
             var fieldColor = this.colorFromAttributes(fieldCharAttrs), // was s
                 specificColor = this.colorFromAttributes(specificCharAttrs); // was u
-            return (0 == specificCharAttrs.color || (0 == specificCharAttrs.classicBits && fieldColor == nullColor) ?
-		    (logger.debug("Color: both field & element attr exist, but defaulting to field color"), fieldColor) :
-		    (logger.debug("Color: both field & element attr exist, but returning element color"), specificColor));
+            if (0 == specificCharAttrs.color || (0 == specificCharAttrs.classicBits && fieldColor == nullColor)) {
+		logger.debug("Color: both field & element attr exist, but defaulting to field color");
+		return fieldColor;
+	    } else {
+		logger.debug("Color: both field & element attr exist, but returning element color");
+		return specificColor;
+	    }
         } else if (null != fieldCharAttrs){
 	    return this.colorFromAttributes(fieldCharAttrs);
 	} else if ( null != specificCharAttrs){
@@ -5528,12 +5561,11 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
                 logger.debug('Line text="' + R + '"');
                 var y = logicalWidth * lineIndex + charIndex; // bufferPos of runStart
                 if (0 !== outliningArray[charIndex]) {
-		    /* Thurs AM
-		       finish render walk, consider standalone test loading screen elements into offline canvas
-		       new git repo (start from Github, I think)
+		    /* Outline is probably broken because this.En() is not in the minified code
+		       but heres a workaround
 		       */
-                    let t = this.En(); // NEEDSWORK .En - and note shadowing of t
-                    BaseRenderer.setStrokeColor(ctx, t.kn);
+                    //let t = this.En(); 
+                    BaseRenderer.setStrokeColor(ctx, "#EEEECC"); // hacky color!
                     let elt2 = screen.screenElements[y],
                         field2 = null != elt2 ? elt2.field : null, // was shadowed n
                         fieldData2 = null != field2 ? field2.fieldData : null, // was shadowed s
@@ -5738,7 +5770,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
         4 & n && BaseRenderer.drawLine(ctx, o, h, o + r * this.charWidth, h);
     }
     
-    Fn(t:any){ //     (Ya.prototype.Fn = function (t) {
+    Fn(t?:any){ //     (Ya.prototype.Fn = function (t) {
         Utils.renderLogger.debug("NYI: 2DG");
     }
 
