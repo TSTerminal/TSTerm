@@ -1,5 +1,5 @@
-import { Utils } from "./Utils.js";
-import { VirtualScreen, TypeValuePair, CharacterAttributes, FieldData, OIALine, CharsetInfo, BaseRenderer } from "./Generic.js";
+import { Utils } from "./utils.js";
+import { VirtualScreen, TypeValuePair, CharacterAttributes, FieldData, OIALine, CharsetInfo, BaseRenderer } from "./generic.js";
 
 export class ScreenElement { // was Io
     position:number;
@@ -174,7 +174,7 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	if (15 == element.charToDisplay()) return this.cursorPos;
 	for (var l = this.cursorPos - 1; l != this.cursorPos; l--) {
             var otherElement = this.screenElements[l];
-            if (15 == otherElement.charToDisplay()) return l;
+            if (otherElement && 15 == otherElement.charToDisplay()) return l; // JOE, gating with null check
             0 == l && (l = this.size);
 	}
 	return -1;

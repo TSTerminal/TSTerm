@@ -106,26 +106,65 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
       the trace messages indicate this is VirtualScreen3270 generating some sort of read response
     */
 
-    cs(t:CharacterAttributes3270){  // (Xo.prototype.cs = function (t) { -- not well understood yet
-        if (null == t) return null;
-        let l:any = {};
-        let n:boolean = !1;
-        return (
-            this.classicBits != t.classicBits && ((l[192] = t.classicBits), (n = !0)),
-            this.highlighting != t.highlighting && ((l[65] = t.highlighting), (n = !0)),
-            this.color != t.color && ((l[66] = t.color), (n = !0)),
-            this.backgroundColor != t.backgroundColor && ((l[69] = t.backgroundColor), (n = !0)),
-            this.characterSet != t.characterSet && ((l[67] = t.characterSet), (n = !0)),
-            this.outlining != t.outlining && ((l[194] = t.outlining), (n = !0)),
-            this.transparency != t.transparency && ((l[70] = t.transparency), (n = !0)),
-            this.validation != t.validation && ((l[193] = t.validation), (n = !0)),
-            this.sisoAllowed != t.sisoAllowed && ((l[254] = t.sisoAllowed), (n = !0)),
-            this.hn != t.hn && ((l[113] = t.hn), (n = !0)),
-            this.rn != t.rn && ((l[114] = t.rn), (n = !0)),
-            this.an != t.an && ((l[115] = t.an), (n = !0)),
-            n && !t.isNonDefault() && (l = { 0: 0 }),
-            n ? l : null
-        );
+    cs(t:CharacterAttributes3270):Map<number,number>|null {  // (Xo.prototype.cs = function (t) { -- not well understood yet
+        if (null == t) {
+	    return null;
+	}
+        let l = new Map<number,number>();
+        let n:boolean = false;
+        if (this.classicBits != t.classicBits){
+	    l.set(192, t.classicBits);
+	    n = true;
+	}
+        if (this.highlighting != t.highlighting){
+	    l.set(65, t.highlighting);
+	    n = true;
+	}
+        if (this.color != t.color){
+	    l.set(66, t.color);
+	    n = true;
+	}
+        if (this.backgroundColor != t.backgroundColor){
+	    l.set(69, t.backgroundColor);
+	    n = !0;
+	}
+	if (this.characterSet != t.characterSet){
+	    l.set(67, t.characterSet);
+	    n = true;
+	}
+        if (this.outlining != t.outlining){
+	    l.set(194, t.outlining);
+	    n = true;
+	}
+        if (this.transparency != t.transparency){
+	    l.set(70, t.transparency);
+	    n = true;
+	}
+        if (this.validation != t.validation){
+	    l.set(193, t.validation);
+	    n = true;
+	}
+        if (this.sisoAllowed != t.sisoAllowed){
+	    l.set(254, t.sisoAllowed);
+	    n = true;
+	}
+        if (this.hn != t.hn){
+	    l.set(113, t.hn);
+	    n = true;
+	}
+	if (this.rn != t.rn){
+	    l.set(114, t.rn);
+	    n = true;
+	}
+        if (this.an != t.an){
+	    l.set(115, t.an);
+	    n = true;
+	}
+	if (n && !t.isNonDefault()){
+	    l = new Map<number,number>();
+	    l.set(0,0);
+	}
+        return n ? l : null;
     }
 
     isProtected():boolean{  // minified as ".ds"
@@ -2748,7 +2787,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		: n.attributes.isProtected() || n.position === this.cursorPos
 		? (this.Su(1), false)
 		: this.inInsertMode
-		? ((l = this.Qu(this.cursorPos, this.Gu(this.cursorPos, !1, !1, !1), t)) || this.Su(1), l)
+	    // JOE - desperate cast on next line
+		? ((l = this.Qu(this.cursorPos, (this.Gu(this.cursorPos, !1, !1, !1) as number), t)) || this.Su(1), l) 
 		: this.Lu(t)
             : this.inInsertMode
 		? ((l = this.Qu(this.cursorPos, this.cursorPos - 1, t)) || this.Su(1), l)
@@ -3051,8 +3091,10 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                         return false;
 		    }
                     var m = this.dh(ttt); // INTERIM
-                    for (let ppp = 0; ppp < m && (P = this.getScreenElementByPosition(ttt + ppp)); ppp++){
-			this.setCharAttrs(ttt + ppp, n);
+		    if (m){ // JOE - screening null case
+			for (let ppp = 0; ppp < m && (P = this.getScreenElementByPosition(ttt + ppp)); ppp++){
+			    this.setCharAttrs(ttt + ppp, n);
+			}
 		    }
 		} else {
 		    logger.warn("Buffer address does not contain a field attribute");
@@ -3158,7 +3200,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	var fieldMapKeys = Object.keys(this.fieldDataMap);
 	for (u = 0; u < fieldMapKeys.length; u++) {
             var P;
-	    var N = this.fieldDataMap[fieldMapKeys[u]];
+	    var N = (this.fieldDataMap[fieldMapKeys[u]] as FieldData3270); // JOE, ugly , but true cast
 	    var F = N.length;
 	    k = N.position; // NEEDSWORK, where does k come from ?
             if (((P = this.getScreenElementByPosition(k)) || ((P = new ScreenElement(k, 0x40, N)), this.putScreenElement(k, P)), F > 0)) // did i damage this
@@ -3996,16 +4038,14 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             let tt = this.screenElements[s];
             if (tt) {
                 if (2 === this.Fs) {
-                    let l = localCharAttrs.cs(tt.charAttrs);
+                    let l:Map<number,number>|null = tt.charAttrs ? localCharAttrs.cs(tt.charAttrs as CharacterAttributes3270) : null;
                     if (null != l) {
                         // i  = tt.charAttrs; // i is not referenced downstream
 			n.push(40);
-                        let e = Object.keys(l);
-                        for (let ttt = 0; ttt < e.length; ttt++) {
-			    let key:number = e[ttt] as number; // JOE's simplifying assertion
+			l.forEach(function(value,key){
 			    n.push(key);
-			    n.push(l[key]);
-			}
+			    n.push(value);
+			});
                     }
                 }
                 let l = tt.charToDisplay();
@@ -4232,11 +4272,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	return l && l.field ? l.field.fieldData.position : null;
     }
     
-    dh(t:number):number{ // (lc.prototype.dh = function (t) {
-	let l:number = this.Gu(t, false, false, false);
-	// was weak-kneed, but now steadfastly a number
-	// return null != l ? (l < t ? this.size - t : l - t) : null;
-	return (l < t ? this.size - t : l - t);
+    dh(t:number):number|null{ // (lc.prototype.dh = function (t) {
+	let l:number|null = this.Gu(t, false, false, false);
+        return null != l ? (l < t ? this.size - t : l - t) : null;
     }
 
     /* only called from defunct lc.prototype.jr
@@ -4250,11 +4288,11 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     */
     
-    zr(t:number){ // (lc.prototype.zr = function (t) {
+    zr(t:number):number|null{ // (lc.prototype.zr = function (t) {
 	return this.Kr(t, !0, !1);
     }
     
-    Kr(position:number, isEditable:boolean, n:boolean){ // (lc.prototype.Kr = function (t, l, n) {
+    Kr(position:number, isEditable:boolean, n:boolean):number|null{ // (lc.prototype.Kr = function (t, l, n) {
 	return this.Gu(position, !0, isEditable, n);
     }
 
@@ -4262,7 +4300,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     Gu(position:number,
        l:boolean,
        isEditable:boolean,
-       i:boolean):number{ //(lc.prototype.Gu = function (t, l, n, i) {
+       i:boolean):number|null{ //(lc.prototype.Gu = function (t, l, n, i) {
 	var e;
 	this.cacheFieldDataMap();
 	let s:number = -1;
@@ -4278,10 +4316,11 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		r = e;
 		break;
             }
-	for (var a = 1 == l ? -1 : 1, o = r + a; ; ) {
-            if ((o = o < 0 ? h.length + o : o % h.length) == e) return null;
+	let a:number = new Boolean(l).valueOf() ? -1 : 1;
+	for (var o:number = r + a; ; ) {
+            if ((o = (o < 0 ? h.length + o : o % h.length)) == e) return null;
             var c = h[o];
-            if (!this.Hr(s, this.screenElements[c], isEditable) && // JOE used to sloppily compared == 0
+            if (!this.Hr(s, (this.screenElements[c] as ScreenElement), isEditable) && // JOE used to sloppily compared == 0
 		(!isEditable || this.fieldDataMap[c].isEditable())) {
 		var f = Number(c),
                     d = (f + 1) % this.size,
@@ -4290,7 +4329,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             }
             o += a;
 	}
-	// return null; - JOE I am really not convinced it's unreachable 
+	// The above for loop is really while(true), because test is empty
     }
     
     yr(t:number,l:boolean){ // (lc.prototype.yr = function (t, l) {
@@ -4324,7 +4363,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     // this seems fishy, like old demo code
     Zr(){ // (lc.prototype.Zr = function (t) { // parm was never used or passed in
-	if (0 == this.isFieldDataMapCached || 0 == this.Vu) {
+	if (!this.isFieldDataMapCached || !this.Vu) { // JOE: changed from ==0 to ! because falsey tests are cranky in TS
             this.cacheFieldDataMap();
             var n:any = { application: "unknown" };
             if (((this.Xr = n),
@@ -4369,7 +4408,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                     for (f = 2; f <= this.width - 1; f++) {
 			let i = this.width * a,
                             s = this.screenElements[i + f];
-			if (162 != s.ebcdicChar) {
+			if (s && 162 != s.ebcdicChar) { // JOE: added nullity test
                             logger.debug("col sep at " + f + " char=0x" + Utils.hexString(s.ebcdicChar));
                             var v:any = { index: c.length };
                             (v.name = this.Qr(a + 1, o - 1, d + 1, f - 1)),
@@ -5317,12 +5356,10 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
 		     unicodeArray:number[], // was l 
 		     renderingFlagsArray:number[], // was n
 		     charIndex:number, // was i
-		     element:ScreenElement, // was e
+		     elementArg:ScreenElement|null, // was e
 		     field:Field, // was s
 		     u:number) {   // some sort of overriding char
-        if (element == null){
-	    element = Renderer3270.defaultScreenElement;
-	}
+	let element:ScreenElement = (elementArg != null ? elementArg : Renderer3270.defaultScreenElement);
 	if (!u) {
 	    u = element.charToDisplay();
 	}
@@ -5599,10 +5636,10 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
                         var P = screen.screenElements[y],
                             F = screen.screenElements[y + 1],
                             I = screen.Kl[y];
-                        null == I && (I = P.charToDisplay());
+                        null == I && (I = (P as ScreenElement).charToDisplay()); // JOE
                         var D,
                             x = screen.Kl[y + 1];
-                        null == x && (x = F.charToDisplay()),
+                        null == x && (x = (F as ScreenElement).charToDisplay()), // JOE
 			(D = null != f && f[0] == I && f[1] == x ? 8364 : o[I][x]), // GURU WTF
 			logger.debug("Should dbcs render b1=0x" + Utils.hexString(I) +
 				     " b2=0x" + Utils.hexString(x) + " unicode=0x" + Utils.hexString(D));
@@ -5679,11 +5716,13 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
             if (element && element.fieldData) {
 		e = 0;
             } else {
-		for (var l = screen.size - 1; l > 0; l--)
-                    if (screen.screenElements[l] && screen.screenElements[l].fieldData) {
+		for (var l = screen.size - 1; l > 0; l--){
+		    let elementL = screen.screenElements[l];
+                    if (elementL && elementL.fieldData) {
 			e = l;
 			break;
                     }
+		}
 	    }
 	} else {
 	    e = 0;
