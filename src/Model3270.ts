@@ -1493,7 +1493,7 @@ class TN3270EParser{  // minified as ic
 		logger.warn("Unhandled: Enter AID seen in 3270 message data");
 		Utils.hexDump(t, logger);
 		break;
-            case 136:
+            case 0x88: //136:
 		logger.debug("-- Type=AID_STRUCTURED_FIELD");
 		Utils.hexDump(t, logger);
 		break;
@@ -2573,7 +2573,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     getOIAArray():any{ // (lc.prototype.Fl = function () {
 	let OIA_PASSPORT_TE = [0x40, 0x40]; // JOE - stupid hack for now
 	let co = VirtualScreen3270.co;
-	let parser = this.getParserOrFail("getOIAArray");
+	let parser = this.parser;
 	let renderer = this.getRenderer3270OrFail("getOIAArray");
 	var t = this.oiaLine.xn;
 	t.fill(0x20); // blanks
@@ -2582,6 +2582,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    VirtualScreen3270.oiaWarnCount++
 	}
 	if (t.length > 0){
+	    console.log("JOE early exit from OIAArray");
 	    return t; // yikes!
 	}
 	var l = 0;
@@ -2609,6 +2610,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		case 88:
                     t[n++] = 88;
 		}
+	    if (parser == null){
+		throw "Illegal State, parser null deep in body of getOIAArray";
+	    }
             if ((renderer.jt > 0 && ((n = 53),
 				     (t[n++] = VirtualScreen3270.Pt[0]),
 				     (t[n++] = VirtualScreen3270.Pt[1]),
@@ -3366,7 +3370,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		    JSON.stringify(this.Vs));
 	if (n && !0 === this.Me && !this.Vs.zs) { // INTERIM .Vs
 	    console.log("JOE: maybe processing enter 1");
-	    let temp:number|null = null;
+	    let temp:number|null = n;
             if (126 === n && !(temp = this.er())){
 		return;
 	    }
@@ -3960,6 +3964,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     // called for handleReadModified -- evil assignment of t here
     Ke(t:number){ // lc.prototype.Ke = function (t) {
+	console.log("JOE: Ke(t), t="+t);
 	return (t && 136 !== t) || (t = 96), this.Ir(246, t);
     }
 

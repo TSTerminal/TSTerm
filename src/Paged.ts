@@ -129,6 +129,7 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	    }
             this.cursorPos = 0;
 	    this.showScreen();
+	    
 	}
     }
     
@@ -316,18 +317,25 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
     }
     
     handleKey(typeValuePair:TypeValuePair,l:KeyboardEvent):void { // (Oo.prototype.Wi = function (t, l) {
+	console.log("JOE: handleKey (paged) after keydown "+JSON.stringify(typeValuePair));
+	Utils.keyboardLogger.debug("handleKey debug working");
 	if (8 === typeValuePair.type && 1 === typeValuePair.value.length && this.Qn & this.Le){
 	    Utils.keyboardLogger.warn("Rejecting FALLBACK keydown, value=" + typeValuePair.value +
 		    ", because modifierKeyState=" + this.Qn + ", which leads to undefined behavior");
 	} else {
             var n = l.keyCode;
+	    // what does Enter do here when it works?
             if (2 === typeValuePair.type || 8 === typeValuePair.type) {
+		Utils.keyboardLogger.debug("case 1");
 		var i = typeValuePair.value;
 		if (1 != i.length) return;
 		this.getFieldDataByPosition(this.cursorPos, !0);
+		Utils.keyboardLogger.debug("keydown, going to charCodeInput");
 		this.handleCharCodeInput(i.charCodeAt(0));
             } else {
+		Utils.keyboardLogger.debug("case 2");
 		if (16 !== typeValuePair.type && 32 !== typeValuePair.type) return void this.Yi(n); // INTERIM .Yi
+		Utils.keyboardLogger.debug("keydown, going to function t-v pair = "+JSON.stringify(typeValuePair));
 		this.handleFunction(typeValuePair.value);
             }
             l.stopPropagation(), l.preventDefault();
