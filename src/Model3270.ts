@@ -542,7 +542,7 @@ class TN3270EParser{  // minified as ic
     responseBuffer:any[];
     tn3270EMode:boolean;
     printableChars:any[];
-    Ih:number; // not well understood
+    sequenceNumber:number;
     capabilitiesToOffer:number[];
     atEndOfHostMessage:boolean;
     // these fields are a duplicate of fields in VirtualScreen3270
@@ -574,7 +574,7 @@ class TN3270EParser{  // minified as ic
 	this.responseBuffer = [];   // minified as this.si
 	this.tn3270EMode = false;  // this.Zh = false; because we handle NVT, too
 	this.printableChars = []; // this.ha = []; used when reading orders out of WRITE_COMMAND_xxx
-	this.Ih = 0;
+	this.sequenceNumber= 0;
 	// note that Rs and TS are "globals"
 	
 	this.capabilitiesToOffer = (virtualScreen.useBetterCapabilities ?  // was this.ra
@@ -701,6 +701,29 @@ class TN3270EParser{  // minified as ic
     static STRFLD_SET_CHECKPOINT_INTERVAL   = 0x1032;
     static STRFLD_RESTART                   = 0x1033;
     static STRFLD_SAVE_RESTORE_PANEL        = 0x1034;
+
+    // PF1 is F1
+    // PF9 is F9
+    // PF10 is 7A
+    // PF11 is 7B
+    // PF12 is 7C
+    // PF13 is C1
+    // PF21 is C9
+    // PF22 is 4A
+    // PF23 is 4B
+    // PF24 is 4C
+    static AID_NO_AID              = 0x60; //  96
+    static AID_STRUCTURED_FIELD    = 0x88; // 136
+    static AID_READ_PARTITION      = 0x61; //  97
+    static AID_TRIGGER_ACTION      = 0x7f; // 127
+    static AID_CLEAR_PARTITION_KEY = 0x6a; // 106
+    static AID_PA3                 = 0x6b; // 107
+    static AID_PA1                 = 0x6c; // 108
+    static AID_CLEAR_KEY           = 0x6d; // 109
+    static AID_PA2                 = 0x6e; // 110
+    static AID_ENTER_KEY           = 0x7d; // 125
+    static AID_SELECTOR_PEN_MOUSE  = 0x7e; // 126
+    // sysreq 0xF0 - 240
 
     static IAC = 0xFF;   // 255
     static DONT = 0xFE;  // 254
@@ -1488,12 +1511,12 @@ class TN3270EParser{  // minified as ic
             case TN3270EParser.COMMAND_WRITE_STRUCTURED_FIELD_LOCAL:
 		logger.debug("-- Type=WRITE_STRUCTURED_FIELD"), (n = this.parseWSF(t, 0, l, true));
 		break;
-            case 125:
+            case TN3270EParser.AID_ENTER_KEY: // 125
 		logger.debug("-- Type=AID_ENTER_KEY");
 		logger.warn("Unhandled: Enter AID seen in 3270 message data");
 		Utils.hexDump(t, logger);
 		break;
-            case 0x88: //136:
+            case TN3270EParser.AID_STRUCTURED_FIELD: // 136
 		logger.debug("-- Type=AID_STRUCTURED_FIELD");
 		Utils.hexDump(t, logger);
 		break;
@@ -1986,9 +2009,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     // poorly understood stuff
     Ts:number; // bound, not used, I think.
-    Fs:number; // partition thing??
+    replyMode:number; // replyMode, also has per-partition thing
     Ds:boolean;
-    Ls:any;
+    Ls:any;  // see notes in constructor
     Vs:any;
     Ys:any;  // a setInterval interval ID
     responseDisposition:any;
@@ -2014,6 +2037,10 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     Tr:any[] = [];  // probably obsolete, only set, never used
     Sr:boolean = false; // probably obsolete, only set, never used
     Xr:any;  // something that only seem to be used in demo code
+
+    static REPLY_MODE_FIELD = 0; // old
+    static REPLY_MODE_EXTENDED = 1; // extended field attribues
+    static REPLY_MODE_CHARACTER = 2; // per-character attributes (most feature-rich)
         
     constructor(width:number, height:number){ // function lc(t, n) {
 	super(width,height);
@@ -2073,15 +2100,25 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	this.capabilities = null;   // minimized this.Ns; - this is weird that not always filled
 	this.inTN3270EMode = false; // minified this.Ps = !1;
 	this.inInsertMode = false;  // this is probably isInsertMode (as opposed to overwrite which is 3270 default)
-	this.Fs = 0;
 	this.convoType = VirtualScreen3270.convoTypes.NVT as number;  // the conversation type can flip back and forth between NVT and 3270, minified as this.Is
 	this.Ds = !1;
 	this.currentPartitionID = 0;  // minified as this.xs = 0;
 	this.partitionState = 0; // was this.Os = 0
-	this.partitionInfoMap = { 0: { amode: false, size: this.size } }; // minified as this.Ms 
+	this.partitionInfoMap = { 0: { amode: false, size: this.size } }; // minified as this.Ms
+	this.replyMode = VirtualScreen3270.REPLY_MODE_FIELD; // general, not partition
+	
 	// this.Ls.Bs can hold a value from the nh map { PF01: nn, Clear, mmm}
+	// the nm map seems to be a protocol commands for key/function table
+	// so Ls.Bs seems to be lastCommand or command for xxx
 	// Ls.Fs/Ws/Gs seem to be partition characteristics
-	this.Ls = { Bs: 96, _s: 2, Fs: 0, Ws: "", Qs: "", Gs: 0 }; 
+	// .s has seen 2 and 32
+	// .Fs seems to be either 2 or 0 and has something to do with reply mode
+	// .Ws is an empty string or 0 but is never used
+	// .Qs is an empty string or 0 but is never used
+	// .Gs is 0 everywhere
+	this.Ls = { Bs: 96, _s: 2,
+		    replyMode: VirtualScreen3270.REPLY_MODE_FIELD,
+		    Ws: "", Qs: "", Gs: 0 }; 
 	this.usingAlternateSize = false; // minified as this.js = !1;
 	this.scriptIsRunning = false; // this.Zn = !1; 
 	this.Xn = false; // Xn and Me see to have opposite values in practice
@@ -2703,7 +2740,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     Ou(t:any):any{ // (lc.prototype.Ou = function (t) {
 	return !(!this.Xn ||
 		 (this.su && this.su.uu && this.su.au ?
-		  (this.Mu(), this.su.hu && this.Uu(), 1) :
+		  (this.doReset(), this.su.hu && this.doTab(), 1) :
 		  this.ii && this.ii.includes(t)));
     }
 
@@ -2803,9 +2840,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     ku(){ // lc.prototype.ku = function () {
 	if (this.su && this.su.uu && this.su.ru){
             setTimeout(() => {
-		this.Mu();
+		this.doReset();
 		if (this.su.hu){
-		    this.Uu();     // note that arrow functions inherit this scope
+		    this.doTab();     // note that arrow functions inherit this scope
 		}
             }, 800);
 	}
@@ -3276,19 +3313,19 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		this.Vs.zs = 1;
 		this._h(this.Ls.Bs); // INTERIM
 		break;
-            case 246:
+            case TN3270EParser.COMMAND_READ_MODIFIED: // 246
             case 6:
             case 54:
 		logger.debug("-- Type=READ_MODIFIED");
 		this.Vs.zs = 1;
-		this.Ke(this.Ls.Bs); // INTERIM
+		this.doReadModified(this.Ls.Bs); 
 		break;
-            case 110:
+            case TN3270EParser.COMMAND_READ_MODIFIED_ALL: // 110
             case 14:
             case 62:
 		logger.debug("-- Type=READ_MODIFIED_ALL");
 		this.Vs.zs = 1;
-		this.Wh(this.Ls.Bs); // INTERIM
+		this.doReadModifiedAll(this.Ls.Bs); 
 		break;
             case TN3270EParser.COMMAND_WRITE_STRUCTURED_FIELD:
 		logger.debug("-- Type=WRITE_STRUCTURED_FIELD");
@@ -3365,7 +3402,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     handleFunction(fname:string){ // (lc.prototype.Je = function (t) {
 	let logger = Utils.keyboardLogger; // was ka
 	var l,
-            n = this.ir(fname); // a number
+            n = this.ir(fname); // a number, plus side-effects to Ls.Bs
 	console.log("JOE: handleFunction fname="+fname+" n="+n+" this.Me="+this.Me+" this.Vs="+
 		    JSON.stringify(this.Vs));
 	if (n && !0 === this.Me && !this.Vs.zs) { // INTERIM .Vs
@@ -3379,7 +3416,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             if (VirtualScreen3270.ih.indexOf(n) > -1 && !this.sr()) return;
 	    console.log("JOE: maybe processing enter 3");
 	    this.ur(n);
-	    if (109 === n){
+	    if (TN3270EParser.AID_CLEAR_KEY === n){
 		this.clear();
 		this.setCursorPos(0);
 		this.bufferPos = 1 % this.size;
@@ -3391,35 +3428,44 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    return false;
 	}
 	if (VirtualScreen3270.qCommands.indexOf(fname) >= 0) {
-            const fieldData = this.getFieldData3270ByPosition(this.cursorPos, !0), 
-		  n = this.getScreenElementByPosition(this.cursorPos);
+            const fieldData = this.getFieldData3270ByPosition(this.cursorPos, !0); 
+	    const element = this.getScreenElementByPosition(this.cursorPos);
             if ("Cursor Up" == fname) this.handleCursorMovement(-this.width);
             else if ("Cursor Right" == fname) this.handleCursorMovement(1);
             else if ("Rapid Right" == fname) this.handleCursorMovement(2);
             else if ("Cursor Down" == fname) this.handleCursorMovement(this.width);
             else if ("Cursor Left" == fname) this.handleCursorMovement(-1);
             else if ("Rapid Left" == fname) this.handleCursorMovement(-2);
-            else if ("Backspace" == fname) this.rr(); 
-            else if ("Home" == fname) this.ar();
+            else if ("Backspace" == fname) this.handleBackspace(); 
+            else if ("Home" == fname) this.handleHome();
             else {
-		if ("End" == fname) return void this.or();
-		"New Line" == fname ? this.cr() : "Back Tab" == fname ? this.dr() : "Tab" == fname && this.Uu();
+		if ("End" == fname) return void this.handleEnd();
+		"New Line" == fname ?
+		    this.handleNewLine() :
+		    "Back Tab" == fname ?
+		    this.handleBackTab() :
+		    "Tab" == fname &&
+		    this.doTab();
             }
-            fieldData && (this._u(fieldData, n), this.Wu(fieldData));
+            fieldData && (this._u(fieldData, element), this.Wu(fieldData));
 	} else if ("Attn" == fname) this.wr();
 	else if ("Sys Req" === fname) (this.Ds = !0), this.vr();
-	else if ("Reset" === fname) this.Mu();
-	else if ("Erase EOF" == fname) this.pr();
-	else if ("Erase Field" == fname) this.Ar();
-	else if ("Erase Input" == fname) this.br();
-	else if ("Erase Word" == fname) this.gr();
-	else if ("Delete" == fname) this.mr();
-	else if ("Insert" == fname) (this.inInsertMode = !this.inInsertMode), this.renderer && this.renderer.ml();
-	else if ("Null" == fname) {
+	else if ("Reset" === fname) this.doReset();
+	else if ("Erase EOF" == fname) this.handleEraseEOF();
+	else if ("Erase Field" == fname) this.handleEraseField();
+	else if ("Erase Input" == fname) this.handleEraseInput();
+	else if ("Erase Word" == fname) this.handleEraseWord();
+	else if ("Delete" == fname) this.doDelete();
+	else if ("Insert" == fname) {
+	    this.inInsertMode = !this.inInsertMode;
+	    if (this.renderer){
+		this.renderer.ml();
+	    }
+	} else if ("Null" == fname) {
             const thing = 0;
-            this.Er(thing);
-	} else if ("Dup" == fname) this.Er(VirtualScreen3270.th);
-	else if ("Field Mark" == fname) this.Er(VirtualScreen3270.lh);
+            this.handleEnterSpecialCharacter(thing);
+	} else if ("Dup" == fname) this.handleEnterSpecialCharacter(VirtualScreen3270.th);
+	else if ("Field Mark" == fname) this.handleEnterSpecialCharacter(VirtualScreen3270.lh);
 	else if ("Hex Entry" == fname) {
             if (!this.kr()) return false;
             (this._e = []), (this.We = true);
@@ -3480,13 +3526,13 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    this.setCursorPos(0);
 	    this.bufferPos = 1 % this.size;
 	    this.isFormatted = !1;
-	    this.Mu();
+	    this.doReset();
 	} else {
 	    this.Su(3);
 	}
     }
 
-    Mu(){ // (lc.prototype.Mu = function () {
+    doReset(){ // (lc.prototype.Mu = function () {
 	if (2 != this.Cu){
 	    this.Fu();
 	}
@@ -3499,7 +3545,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     // called from handleFunction("eraseField")
-    Ar(){ // lc.prototype.Ar = function () {
+    handleEraseField(){ // lc.prototype.Ar = function () {
 	var t, l, n;
 	this.cacheFieldDataMap();
 	if (this.isFormatted){
@@ -3575,7 +3621,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
     }
 
-    pr(){ // (lc.prototype.pr = function () {
+    handleEraseEOF(){ // (lc.prototype.pr = function () {
 	let t, l;
 	if ((this.cacheFieldDataMap(), this.isFormatted)) {
             if (((l = this.getFieldData3270ByPosition(this.cursorPos, true)), !l || l.attributes.isProtected())) return this.Su(1), void (this.renderer && this.renderer.ml());
@@ -3587,8 +3633,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	this.zh(this.cursorPos, t, 0, !0, !0), l && l.setModified(), this.renderer && this.renderer.fullPaint();
     }
 
-    // called from handleFunction("erase input")
-    br(){ // (lc.prototype.br = function () {
+    handleEraseInput(){ // (lc.prototype.br = function () {
 	let t;
 	this.cacheFieldDataMap();
 	let l,
@@ -3618,7 +3663,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     // called from handleFunction("erase word")
-    gr(){ // (lc.prototype.gr = function () {
+    handleEraseWord(){ // (lc.prototype.gr = function () {
 	let t, l, n, i;
 	this.cacheFieldDataMap();
 	let e = this.getScreenElementByPosition(this.cursorPos);
@@ -3643,7 +3688,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		l++;
             }
 	e && 64 !== s && 0 !== s && l++;
-	for (let t = this.cursorPos; t < l; t++) this.mr();
+	for (let t = this.cursorPos; t < l; t++) this.doDelete();
     }
     
     Qu(t:number,l:number,n:number):boolean{ // (lc.prototype.Qu = function (t, l, n) {
@@ -3689,7 +3734,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     // called from handleFunction("delete") and .gr()
-    mr(){ //(lc.prototype.mr = function () {
+    doDelete(){ //(lc.prototype.mr = function () {
 	let t;
 	let l:FieldData3270|null = null;
 	this.cacheFieldDataMap();
@@ -3746,8 +3791,11 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     // called from handleFunction("FieldMark","Dup","Null")
-    Er(t:number){ //   (lc.prototype.Er = function (t) {
-	this.enterCharacterAtCursor(t) && t === VirtualScreen3270.th && this.Uu(), this.renderer && this.renderer.fullPaint();
+    handleEnterSpecialCharacter(ch:number){ //   (lc.prototype.Er = function (t) {
+	this.enterCharacterAtCursor(ch) && ch === VirtualScreen3270.th && this.doTab();
+	if (this.renderer){
+	    this.renderer.fullPaint();
+	}
     }
 
     // handle cursor movement
@@ -3789,8 +3837,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
     }
 
-    // called from handleFunction("NewLine")
-    cr(){ // (lc.prototype.cr = function () {
+    handleNewLine(){ // (lc.prototype.cr = function () {
 	this.cacheFieldDataMap();
 	var t = Math.floor(this.cursorPos / this.width);
 	if (!this.isFormatted) return this.setCursorPos((t + 1) * this.width), void (this.renderer && this.renderer.ml());
@@ -3820,7 +3867,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
     }
     
-    Uu(){ // (lc.prototype.Uu = function () {
+    doTab(){ // (lc.prototype.Uu = function () {
 	if ((this.cacheFieldDataMap(), this.isFormatted)) {
             const t = this.getFieldData3270ByPositionNoNull(this.cursorPos, !0);
 	    const l = t.position;
@@ -3845,7 +3892,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	let element = this.screenElements[this.cursorPos];
 	const field = element && element.field;
 	if (field && field.fieldData.isEditable() && this.cursorPos >= field.start){
-	    this.mr(); // INTERIM .mr
+	    this.doDelete(); // INTERIM .mr
 	}
     }
     
@@ -3867,26 +3914,23 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             if (t) {
 		const element2 = this.screenElements[t];
 		const l = element2 && element2.field;
-		l && ((t += l.fieldData.length - 1), Utils.protocolLogger.debug("Got editable field at " + t), this.setCursorPos(t), this.fu && this.mr());
+		l && ((t += l.fieldData.length - 1), Utils.protocolLogger.debug("Got editable field at " + t), this.setCursorPos(t), this.fu && this.doDelete());
             }
 	} else this.Nr();
     }
 
-    // called from handleFunction("backspace")
-    rr(){// (lc.prototype.rr = function () {
+    handleBackspace(){// (lc.prototype.rr = function () {
 	this.cu ? this.Pr() : this.Nr();
     }
 
-    // called from handleFunction("home")
-    ar(){//(lc.prototype.ar = function () {
+    handleHome(){//(lc.prototype.ar = function () {
 	this.cacheFieldDataMap();
 	if (!this.isFormatted) return this.setCursorPos(0), void (this.renderer && this.renderer.ml());
 	var t = this.yr(this.size - 2, !1);
 	null != t && (this.setCursorPos(t + 1), this.renderer && this.renderer.ml());
     }
 
-    // called from handleFunction("Back Tab"):
-    dr(){ // (lc.prototype.dr = function () {
+    handleBackTab(){ // (lc.prototype.dr = function () {
 	this.cacheFieldDataMap();
 	if (!this.isFormatted) return this.setCursorPos(0), void (this.renderer && this.renderer.ml());
 	var t = this.screenElements[this.cursorPos];
@@ -3898,8 +3942,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	null != n && n != this.size - 1 && (this.setCursorPos(n + 1), this.renderer && this.renderer.ml());
     }
     
-    // Called from handleFunction("End")
-    or(){ // (lc.prototype.or = function () {
+    handleEnd(){ // (lc.prototype.or = function () {
 	this.cacheFieldDataMap();
 	if (!this.isFormatted) return this.setCursorPos(this.size - 1), void (this.renderer && this.renderer.ml());
 	let t:any;
@@ -3933,9 +3976,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             null !== this.zn && void 0 !== this.zn && this.Ui(this.zn), this.renderer.fullPaint();
 	}
     }
-    
-    ur(t:any   // not used
-      ):void{ // (lc.prototype.ur = function (t) {
+
+    // I think t should always be a number, but... I have no proof yet
+    ur(t:any):void{ // (lc.prototype.ur = function (t) {
 	if (this.convoType === VirtualScreen3270.convoTypes.NVT){
 	    this.eh();
 	    this.handleNVTData1([13, 10]);
@@ -3943,7 +3986,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    this.Me = false;
 	    this.inInsertMode = false;
 	    this.Vs.zs = 1;
-	    this.Ke(t);
+	    this.doReadModified(t);
 	}
     }
 
@@ -3963,14 +4006,18 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     // called for handleReadModified -- evil assignment of t here
-    Ke(t:number){ // lc.prototype.Ke = function (t) {
-	console.log("JOE: Ke(t), t="+t);
-	return (t && 136 !== t) || (t = 96), this.Ir(246, t);
+    doReadModified(aid:number){ // lc.prototype.Ke = function (t) {
+	if (!aid || TN3270EParser.AID_STRUCTURED_FIELD == aid){
+	    aid = TN3270EParser.AID_NO_AID;
+	}
+	return this.gatherModifiedAndSend(TN3270EParser.COMMAND_READ_MODIFIED, aid);
     }
 
-    // evil assignment of t here
-    Wh(t:number){ // (lc.prototype.Wh = function (t) {
-	(t && 136 !== t) || (t = 96), this.Ir(110, t);
+    doReadModifiedAll(aid:number){ // (lc.prototype.Wh = function (t) {
+	if (!aid || TN3270EParser.AID_STRUCTURED_FIELD == aid){
+	    aid = TN3270EParser.AID_NO_AID;
+	}
+	return this.gatherModifiedAndSend(TN3270EParser.COMMAND_READ_MODIFIED_ALL, aid);
     }
     
     Dr(t:number[],l:boolean,n?:boolean){ // (lc.prototype.Dr = function (t, l, n) {
@@ -4016,23 +4063,28 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	return { lr: b1, nr: b2 };
     }
 
-    // read buffer, but its a fucking nightmare of ambiguity about the array
+    // read buffer, but its a fsck-ing nightmare of ambiguity about the array
     _h(t:number){ //  (lc.prototype._h = function (t) {
 	let logger = Utils.protocolLogger;
-	(t && 136 !== t) || (t = 96);
+	if (!t || (TN3270EParser.AID_STRUCTURED_FIELD == t)){
+	    t = 96;
+	}
 	// n/l type ambiguities
 	var l = this.partitionInfoMap[this.currentPartitionID];
-	let n:number[] = this.Or();
+	let n:number[] = this.buildReadResponseHeader();
         let localCharAttrs = new CharacterAttributes3270(0); // was i
-	n.push(t), 109 === t && (this.cursorPos = 0);
+	n.push(t);
+	if (TN3270EParser.AID_CLEAR_KEY === t){
+	    this.cursorPos = 0;
+	}
 	var e = VirtualScreen3270.encodePosition(l, this.cursorPos);
-	if ((Utils.pushTelnetByte(n, e.lr), Utils.pushTelnetByte(n, e.nr), !this.isFormatted)) return 109 === t ? this.xr(n) : this.Dr(n, false);
+	if ((Utils.pushTelnetByte(n, e.lr), Utils.pushTelnetByte(n, e.nr), !this.isFormatted)) return TN3270EParser.AID_CLEAR_KEY === t ? this.xr(n) : this.Dr(n, false);
 	for (var s = 0; s < this.size; s++)
-            if (109 === t) n.push(0);
+            if (TN3270EParser.AID_CLEAR_KEY === t) n.push(0);
 	else {
             let t = this.fieldDataMap[s];
             if (t)
-		if (0 === this.Fs) n.push(29), n.push(t.attributes.sn);
+		if (VirtualScreen3270.REPLY_MODE_FIELD === this.replyMode) n.push(29), n.push(t.attributes.sn);
             else {
 		n.push(41);
 		var u = t.attributes.os();
@@ -4042,7 +4094,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
         else {
             let tt = this.screenElements[s];
             if (tt) {
-                if (2 === this.Fs) {
+                if (VirtualScreen3270.REPLY_MODE_CHARACTER === this.replyMode) {
                     let l:Map<number,number>|null = tt.charAttrs ? localCharAttrs.cs(tt.charAttrs as CharacterAttributes3270) : null;
                     if (null != l) {
                         // i  = tt.charAttrs; // i is not referenced downstream
@@ -4062,19 +4114,21 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     // this guy writes the 5-byte header, but also might some more stuff for non default/0 partitionID's
-    // Or never returns a falsy value
-    Or():number[]{ // (lc.prototype.Or = function () {
+    // this never returns a falsy value
+    buildReadResponseHeader():number[]{ // (lc.prototype.Or = function () {
 	let t:number[];
 	if (this.convoType === VirtualScreen3270.convoTypes.SSCPLU) {
 	    this.Ds ? ((t = [255, 245, 7, 0, 0, 0, 0]), (this.Ds = !1)) : (t = [7, 0, 0, 0, 0]);
 	} else if (this.parser && this.inTN3270EMode) { // JOE this.parser is in there to make TSC happy
             t = [0, 0, 0];
-            var l = this.parser.Ih++, // the sequence number
-		n = 255 & l;
-            Utils.pushTelnetByte(t, (65280 & l) >> 8);
-	    Utils.pushTelnetByte(t, n);
-            let i = this.Mr();
-            t.push(...i);
+            let seqNo = this.parser.sequenceNumber++;
+            Utils.pushTelnetByte(t, (seqNo && 0xFF00) >> 8);
+	    Utils.pushTelnetByte(t, (seqNo && 0x00FF));
+	    if (this.currentPartitionID){ // 0 if un-partitioned
+		let partitionHeader = [136, 0, 0, 128, this.currentPartitionID];
+		// let i = this.Mr();
+		t.push(...partitionHeader);
+	    }
 	} else if (!this.parser){
 	    throw "No Parser in VirtualScreen3270.or";
 	} else {
@@ -4082,7 +4136,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
 	return t;
     }
-    
+
+    // no longer called, incorporated into lc.prototype.Or()
     Mr(){ // (lc.prototype.Mr = function () {
 	let t;
 	return (t = this.currentPartitionID ? [136, 0, 0, 128, this.currentPartitionID] : []), t;
@@ -4112,35 +4167,46 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	return t;
     }
 
-    // gatherModifiedFieldsAndSend 
-    Ir(t:number,l:number){ // (lc.prototype.Ir = function (t, l) {
+    static isShortReadAID(aid:number):boolean{
+	return ((TN3270EParser.AID_PA1 === aid) ||    // 108
+	    (TN3270EParser.AID_PA2 === aid) || // 110
+	    (TN3270EParser.AID_PA3 === aid) || // 107
+	    (TN3270EParser.AID_CLEAR_KEY === aid) || // 109
+	    (TN3270EParser.AID_CLEAR_PARTITION_KEY === aid)); // 106
+    }
+
+    gatherModifiedAndSend(readCommand:number,
+			  aid:number){ //(lc.prototype.Ir = function (t, l) {
 	let logger = Utils.protocolLogger;
-	console.log("JOE gatherModifiedFieldsAndSend t="+t+" l="+l+" this.currentPartitionID="+this.currentPartitionID);
+	console.log("JOE gatherModifiedAndSend readCommand="+readCommand+
+	    " aid="+aid+" this.currentPartitionID="+this.currentPartitionID);
 	this.cacheFieldDataMap();
 	var n = this.partitionInfoMap[this.currentPartitionID];
-	logger.debug("--- read command: " + Utils.hexString(t));
-	let i:number[] = this.Or();
+	logger.debug("--- read command: " + Utils.hexString(readCommand));
+	let i:number[] = this.buildReadResponseHeader();
 	if (i) {
             if (this.convoType === VirtualScreen3270.convoTypes.SSCPLU) {
 		return this.Dr(i, true, true);
 	    }
-            if (246 === t && (108 === l || 110 === l || 107 === l || 109 === l || 106 === l)){
-		Utils.protocolLogger.debug("--- short read AID: " + Utils.hexString(l));
-		return this.Ur(i, l);
+            if ((readCommand === TN3270EParser.COMMAND_READ_MODIFIED) &&
+		VirtualScreen3270.isShortReadAID(aid)){
+		Utils.protocolLogger.debug("--- short read AID: " + Utils.hexString(aid));
+		return this.Ur(i, aid);
 	    }
-            if (110 === t && 109 === l){
+            if ((readCommand === TN3270EParser.COMMAND_READ_MODIFIED_ALL) &&
+		(TN3270EParser.AID_CLEAR_KEY === aid)){
 		this.cursorPos = 0;
 	    }
-	    Utils.pushTelnetByte(i, l);
+	    Utils.pushTelnetByte(i, aid);
             var e = VirtualScreen3270.encodePosition(n, this.cursorPos);
 	    Utils.pushTelnetByte(i, e.lr);
 	    Utils.pushTelnetByte(i, e.nr);
-            if ( 110 === t && 109 === l) return void (null != this.websocket && (this.eorAndSend(i), this.Su(2)));
+            if ( 110 === readCommand && TN3270EParser.AID_CLEAR_KEY === aid) return void (null != this.websocket && (this.eorAndSend(i), this.Su(2)));
 	}
 	if (!this.isFormatted) {
 	    return this.Dr(i, true);
 	}
-	if (110 === t || 126 !== l) {
+	if (110 === readCommand || 126 !== aid) {
             this.size;
             for (var s = Object.keys(this.fieldDataMap), u = (this.Te(this.cursorPos), 0); u < s.length; u++) {
 		var h = this.fieldDataMap[s[u]],
@@ -4169,7 +4235,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                     }
 		}
             }
-	} else if (126 === l) {
+	} else if (126 === aid) {
             let t = Object.keys(this.fieldDataMap);
             for (let l = 0; l < t.length; l++) {
 		let e = this.fieldDataMap[t[l]],
@@ -4689,14 +4755,11 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     /*
-      These are described in chapter 6 of
+      These Query Reply's are described in chapter 6 of
 
       http://www.bitsavers.org/pdf/ibm/3174/GA23-0059-07_3270_Data_Stream_Programmers_Reference_199206.pdf
       
-      
-    */
-    
-    
+    */  
     
     doQueryReply(specificCodes:number[]|null){ // (lc.prototype.Fh = function (t) {
 	let logger = Utils.protocolLogger;
@@ -4709,11 +4772,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             qReply.addByte(0);
 	    qReply.addByte(0);
 	    qReply.addByte(0);  
-            var seqNum = this.parser.Ih++; // the sequence number, was n
-	    var i = (0xFF00 & seqNum) >> 8;
-	    var e = 0xFF & seqNum;
-            qReply.addByte(i);
-	    qReply.addByte(e);
+            var seqNum = this.parser.sequenceNumber++;
+            qReply.addByte((0xFF00 & seqNum) >> 8);
+	    qReply.addByte(0xFF & seqNum);
 	}
 	qReply.addByte(0x88);
 	var s = this.getAlternateHeight();
@@ -4932,10 +4993,10 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 			logger.debug("---- Type=READ_PARTITION; CMD=ReadBuffer"), this._h(t);
 			break;
                     case TN3270EParser.COMMAND_READ_MODIFIED:
-			logger.debug("---- Type=READ_PARTITION; CMD=Read Modified Fields"), this.Ke(t);
+			logger.debug("---- Type=READ_PARTITION; CMD=Read Modified Fields"), this.doReadModified(t);
 			break;
                     case TN3270EParser.COMMAND_READ_MODIFIED_ALL:
-			logger.debug("---- Type=READ_PARTITION; CMD=Read Modified Fields All"), this.Wh(t);
+			logger.debug("---- Type=READ_PARTITION; CMD=Read Modified Fields All"), this.doReadModifiedAll(t);
                     }
 		}
             } else if (TN3270EParser.STRFLD_OUTBOUND_3270_DATA_STREAM === i.key) {
@@ -4948,11 +5009,11 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		? logger.warn("Partitions above 0 (implicit) not yet implemented")
 		: i.mode < 0 || i.mode > 2
 		? logger.warn("Cannot set field mode to type=" + i.mode)
-		: ((this.Fs = i.mode), logger.debug("---- reply mode is " + i.mode))
+		: ((this.replyMode = i.mode), logger.debug("---- reply mode is " + i.mode))
             : TN3270EParser.STRFLD_RESET_PARTN === i.key
-		? this.Yu(i.Bh) && ((this.Fs = 0),
+		? this.Yu(i.Bh) && ((this.replyMode = VirtualScreen3270.REPLY_MODE_FIELD),
 				    (this.currentPartitionID = i.Bh),
-				    (this.Ls.Fs = 0),
+				    (this.Ls.replyMode = VirtualScreen3270.REPLY_MODE_FIELD),
 				    (this.Ls.Ws = 0),
 				    (this.Ls.Qs = 0),
 				    logger.debug("---- reply mode is 0"))
@@ -4998,7 +5059,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
 }
 
-/* the Q(uery)Reply is the TN3270E way of negotiating for advance features,
+/* the Q(uery)Reply is the TN3270E way of negotiating for advanced features,
    like fancy graphics, colors, OEM-specific features, printing features,
    alternate display sizes (132 col vs 80 col), etc.
 */
@@ -5108,7 +5169,7 @@ class QReply { // was nc
     static standardSegmentReply = [0, 4, 0, 252, 0, 252, 0, 5, 2, 0, 128, 0, 5, 2, 4, 128, 0, 5, 2, 11, 128, 0]; // was Sh
     static standardColorReply = [0, 8, 0, 244, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 246, 246, 247, 247]; // was uh
     static standardHighlightingReply = [4, 0, 240, 241, 241, 242, 242, 244, 244]; // was hh
-    static standardReplyModesReply = [0, 1, 2]; // was rh
+    static standardReplyModesReply = [0, 1, 2]; // was rh (field,extended,character)
     static standardAuxDeviceReply = [0, 0]; // was ah
     static standardCharsetsReply = [130, 0, 7, 9, 64, 0, 0, 0, 7, 0, 0, 0, 2, 185, 0, 37, 1, 0, 241, 3, 195, 1, 54]; // was oh
     static standardGraphicSymbolReply = [0, 0, 9, 12, 0, 0, 0, 16, 1, 0, 0, 240, 2, 2, 0, 0, 0, 0, 0, 2, 185, 0, 37]; // was ch
