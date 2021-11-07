@@ -2,6 +2,7 @@ import { Exception,Utils } from "./utils.js";
 import { CharacterAttributes, FieldData, KeyboardMap, 
 	 VirtualScreen, OIALine, CharsetInfo, BaseRenderer } from "./generic.js";
 import { ScreenElement, PagedVirtualScreen, PagedRenderer } from "./paged.js";
+import { GraphicsState } from "./graphics.js";
 
 class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
     classicBits:number;
@@ -531,7 +532,7 @@ export class DeviceType3270 {
     static ps = { type: 9, string: "IBM-DYNAMIC", isExtended: !0 };
 }
 
-class TN3270EParser{  // minified as ic
+export class TN3270EParser{  // minified as ic
     screen:VirtualScreen3270;
     messageName:string;
     state:number;
@@ -695,12 +696,14 @@ class TN3270EParser{  // minified as ic
     static STRFLD_BEGIN_END_FILE            = 0x0F85;
     static STRFLD_INBOUND_TEXT_HEADER       = 0x0FB1;
     static STRFLD_TYPE1_TEXT_OUTBOUND       = 0x0FC1;
-     
-    static STRFLD_REQUEST_RECOVERY_DATA     = 0x1030;
-    static STRFLD_RECOVERY_DATA             = 0x1031; 
-    static STRFLD_SET_CHECKPOINT_INTERVAL   = 0x1032;
-    static STRFLD_RESTART                   = 0x1033;
-    static STRFLD_SAVE_RESTORE_PANEL        = 0x1034;
+
+    // http://bitsavers.org/pdf/ibm/3270/GA23-0059-07_3270_Data_Stream_Programmers_Reference_199206.pdf
+    static STRFLD_PCLK_PROTOCOL               = 0x1013;  // even wireshark doesn't know what this is!
+    static STRFLD_REQUEST_RECOVERY_DATA       = 0x1030;
+    static STRFLD_RECOVERY_DATA               = 0x1031; 
+    static STRFLD_SET_CHECKPOINT_INTERVAL     = 0x1032;
+    static STRFLD_RESTART                     = 0x1033;
+    static STRFLD_SAVE_RESTORE_PANEL          = 0x1034;
 
     // PF1 is F1
     // PF9 is F9
@@ -1560,7 +1563,7 @@ class TN3270EParser{  // minified as ic
 	       partitionID:number,
 	       eraseFirst:boolean,
 	       resizeProhibited:boolean,
-	       useAlternate:boolean):void {
+	       useAlternate:boolean):any {
 	let logger = Utils.protocolLogger; // aka "Za"
 	var commandByte = 0;  // was h
 	for (var r = startPos;
@@ -1602,12 +1605,13 @@ class TN3270EParser{  // minified as ic
 
     static Y:number[] = [4, 5]; // don't really know what this is, a message fragment
 
+    // this returns an order
     parseWSF(t:number[],
 	     startPos:number,
 	     endPos:number,
-	     isOutbound:boolean) { // (ic.prototype.Ta = function (t, l, n, i) {
+	     isOutbound:boolean):any { // (ic.prototype.Ta = function (t, l, n, i) {
 	let logger = Utils.protocolLogger; // was "Za"
-	var e = startPos + 1;
+	var e = startPos + 1; // skipping the command byte 0xF3
 	// t[startPos]; // this is side-effect free junk expression that we don't need
         var recordLength = endPos;
 	var n;
@@ -1615,7 +1619,7 @@ class TN3270EParser{  // minified as ic
 		     " startPos=0x" + Utils.hexString(startPos) +
 		     ", endPos=0x" + Utils.hexString(endPos));
 	Utils.hexDump(t, logger, startPos, endPos);
-	var order:any = { key: 243, xe: [] }; // was r
+	var order:any = { key: 243, structuredFields: [] }; // was r
 	var partitionID = 0; // u
 	var flags = 0;       // was h
 	while (e < endPos){
@@ -1623,7 +1627,7 @@ class TN3270EParser{  // minified as ic
 		logger.warn("Mal-formed structured field, no Length-and-type");
 		break;
             }
-            var a = Utils.readU16(t, e);
+            let a = Utils.readU16(t, e);
             logger.debug("structuredFieldLength=0x" +Utils.hexString(a));
 	    if (a == 0){
 		logger.info("Taking rest of data for structured field length 0000");
@@ -1648,7 +1652,7 @@ class TN3270EParser{  // minified as ic
             case TN3270EParser.STRFLD_ERASE_RESET: // 3
 		var eraseResetFlags = t[e + 3]&0xFF;
 		logger.debug("StructuredField: ERASE/RESET" +
-			     " - (new implicit partitiion default characteristics and size) "+
+			     " - (new implicit partition default characteristics and size) "+
 			     "flags=0x" + Utils.hexString(eraseResetFlags)),
 		logger.debug("  -- high bit in flags implies alternate size active"),
 		// Ugly code warning for this part of the code - setting all sorts of undeclared
@@ -1696,7 +1700,7 @@ class TN3270EParser{  // minified as ic
                     let t = this.partitionInfoMap[this.currentPartitionID];
                     if (t) {
 			t.size = presentationH * presentationW;
-			this.screen.resize(presentationH, presentationW);
+			this.screen.resize(presentationW, presentationH);
 		    }
 		}
 		logger.debug("StructuredField: CREATE_PARTITION pid=" + partitionID +
@@ -1710,12 +1714,18 @@ class TN3270EParser{  // minified as ic
 		logger.debug("  viewport  width =" + viewportW + " height=" + viewportH),
 		logger.debug("  origin    column=" + viewportPresentationX + "    row=" + viewportPresentationY),
 		logger.debug("  presentationSpaceType       =" + (-1 != S ? t[ell + S] : 999999));
+		    break;
+            case TN3270EParser.STRFLD_LOAD_PROGRAMMED_SYMBOLS:
+                logger.debug("Ignoring LOAD_PROGRAMMED_SYMBOLS Structured field");
+		break;
+            case TN3270EParser.STRFLD_PCLK_PROTOCOL:
+	        logger.debug("Ignoring PCLK_PROTOCOL Structured field");
 		break;
             case TN3270EParser.STRFLD_OBJECT_DATA:
             case TN3270EParser.STRFLD_OBJECT_PICTURE:
             case TN3270EParser.STRFLD_OBJECT_CONTROL:
 		let U = this.parseObjectData(t, e, a, type, isOutbound); 
-		U && order.xe.push(U);
+		U && order.structuredFields.push(U);
 		break;
             case TN3270EParser.STRFLD_READ_PARTN:
                 let L:any = { key: 1 };
@@ -1747,7 +1757,7 @@ class TN3270EParser{  // minified as ic
 				 " pid=0x" + Utils.hexString(partitionID) +
 				 ", readPartitionType=0x" + Utils.hexString(readPartitionType));
 		}
-		order.xe.push(L);
+		order.structuredFields.push(L);
 		break;
             case TN3270EParser.STRFLD_SET_REPLY_MODE:
 		partitionID = t[ e + 3]&0xFF;
@@ -1755,11 +1765,11 @@ class TN3270EParser{  // minified as ic
                     attrList = [],
                     attrListOffset = 5;
 		while (attrListOffset < a) attrList.push(t[ e + attrListOffset++]&0xFF);
-		order.xe.push({ key: 9, Bh: partitionID, mode: mode, Fa: attrList });
+		order.structuredFields.push({ key: 9, Bh: partitionID, mode: mode, Fa: attrList });
 		break;
             case TN3270EParser.STRFLD_RESET_PARTN:
 		partitionID = t[ e + 3]&0xFF;
-		order.xe.push({ key: 0, Bh: partitionID });
+		order.structuredFields.push({ key: 0, Bh: partitionID });
 		logger.debug("StructuredField: RESET PARTITION structured field, length=0x" + Utils.hexString(a) +
 			     " pid=0x" + Utils.hexString(partitionID));
 		break;
@@ -1779,15 +1789,11 @@ class TN3270EParser{  // minified as ic
 		logger.debug("Sub.handleWrite at embeddedStart=0x" + Utils.hexString(D) +
 			     " len=0x" + Utils.hexString(x));
 		Utils.hexDump(t, logger, D, x);
-		    // parse write does not return values, so this and all of its friends
-		    // are weird
 		var M = this.parseWrite(t, D, D + x, partitionID, eraseFirst, true, false);
-		/* JOE: void is falsy as far as I can tell so this doesn't do anything
-		   if (M) {
-                   Q.Qh = M; 
-		   }
-		*/
-		order.xe.push(Q);
+		if (M) {
+		    Q.Qh = M; 
+		}
+		order.structuredFields.push(Q);
 		break;
             case TN3270EParser.STRFLD_INBOUND_3270_DATA_STREAM:
 		logger.warn("Unhandled inbound 3270DS structured field");
@@ -1928,11 +1934,26 @@ class TN3270EParser{  // minified as ic
     }
 
     parseObjectData(data:number[],
-		    l:number, // probably start and indices
-		    n:number,
+		    startPos:number, // points at SF length
+		    length:number,   // including length 
 		    structuredFieldType:number,
 		    isOutbound:boolean){ // (ic.prototype.Pa = function (t, l, n, i, e) {
-	Utils.protocolLogger.warn("Unhandled parsing: object structured field");
+	/*
+	  0x0F11 - control
+	  0x0F10 - picture 
+	  0x0F09 - data
+	  the first 7 bytes
+	  length - 2 bytes
+          SF type - 2 bytes above
+	  ID
+	  flags - for fragmentation and reassembly - 0x80 is isFirst 0x40 isLast
+	  
+	  the payload, relative to fragmentation and reassembly, is the chunk w/o the 7 intro bytes
+	*/
+	let logger = Utils.protocolLogger;
+	let fragFlags = data[startPos+5];
+	Utils.protocolLogger.debug("parse object structured field "+data+" from "+startPos);
+	this.screen.graphicsState.ingestFragment(fragFlags,structuredFieldType,data,startPos+7,length-7);
 	return null;
     }
 
@@ -2009,7 +2030,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     // poorly understood stuff
     Ts:number; // bound, not used, I think.
-    replyMode:number; // replyMode, also has per-partition thing
+    replyMode:number; // replyMode, also has per-partition thing - was .Fs
     Ds:boolean;
     Ls:any;  // see notes in constructor
     Vs:any;
@@ -2037,6 +2058,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     Tr:any[] = [];  // probably obsolete, only set, never used
     Sr:boolean = false; // probably obsolete, only set, never used
     Xr:any;  // something that only seem to be used in demo code
+
+    // Graphics extensions
+    graphicsState:GraphicsState = new GraphicsState();
 
     static REPLY_MODE_FIELD = 0; // old
     static REPLY_MODE_EXTENDED = 1; // extended field attribues
@@ -2105,18 +2129,19 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	this.currentPartitionID = 0;  // minified as this.xs = 0;
 	this.partitionState = 0; // was this.Os = 0
 	this.partitionInfoMap = { 0: { amode: false, size: this.size } }; // minified as this.Ms
-	this.replyMode = VirtualScreen3270.REPLY_MODE_FIELD; // general, not partition
+	this.replyMode = VirtualScreen3270.REPLY_MODE_FIELD; // general, not partition, was this.Fs
 	
-	// this.Ls.Bs can hold a value from the nh map { PF01: nn, Clear, mmm}
+	// this.Ls.aid (nee .Bs) can hold a value from the nh map { PF01: nn, Clear, mmm}
 	// the nm map seems to be a protocol commands for key/function table
-	// so Ls.Bs seems to be lastCommand or command for xxx
+	// so Ls.aid seems to be aid, defaulting to NO_AID
 	// Ls.Fs/Ws/Gs seem to be partition characteristics
 	// .s has seen 2 and 32
 	// .Fs seems to be either 2 or 0 and has something to do with reply mode
 	// .Ws is an empty string or 0 but is never used
 	// .Qs is an empty string or 0 but is never used
 	// .Gs is 0 everywhere
-	this.Ls = { Bs: 96, _s: 2,
+	this.Ls = { aid: TN3270EParser.AID_NO_AID, // 96 == 0x60
+		    _s: 2,
 		    replyMode: VirtualScreen3270.REPLY_MODE_FIELD,
 		    Ws: "", Qs: "", Gs: 0 }; 
 	this.usingAlternateSize = false; // minified as this.js = !1;
@@ -2708,7 +2733,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    this.Ls.Gs = 0;
 	    this.Vs.zs = 0;
 	}
-	this.Ls.Bs = 96;
+	this.Ls.aid = TN3270EParser.AID_NO_AID;
 	if (this.callbacks.screenLoadedCallback){
 	    this.callbacks.screenLoadedCallback();
 	}
@@ -2811,10 +2836,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	var l,
             n = this.getFieldData3270ByPosition(this.cursorPos, true);
 	if (n == null){
-	    console.log("JOE enterChar no field found");
-	    console.log("JOE element at pos = "+this.screenElements[this.cursorPos]);
 	    let keys = Object.keys(this.fieldDataMap);
-	    console.log("JOE enterChar no field keyCOunt="+keys.length);
             for (let kk = 0; kk < keys.length; kk++) {
                 let field = this.fieldDataMap[keys[kk]];
 		console.log("  key["+kk+"]="+keys[kk]+" => "+field+" w/len="+field.length);
@@ -2985,7 +3007,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     handleWriteCommand(t:any){ // lc.prototype.qu = function (t) {
 	let logger = Utils.protocolLogger;
 	if (t) {
-	    logger.debug("-- partitionID=" + t.partitionID);
+	    logger.debug("-- partitionID=" + t.partitionID+" screen.partitionState=");
 	    logger.debug("-- eraseFirst=" + t.eraseFirst);
 	    logger.debug("-- resizeProhibited=" + t.resizeProhibited);
 	    logger.debug("-- useAlternateSize=" + t.useAlternate);
@@ -3006,6 +3028,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    } else {
 		logger.debug("writing without erasing");
 	    }
+	    console.log("JOE before handleWriteOrders size="+this.size);
 	    this.handleWriteOrders(t.orders); 
 	    this.clearCachedFieldInfo();
 	    this.showScreen();
@@ -3311,21 +3334,21 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             case 50:
 		logger.debug("-- Type=READ BUFFER");
 		this.Vs.zs = 1;
-		this._h(this.Ls.Bs); // INTERIM
+		this._h(this.Ls.aid); // INTERIM
 		break;
             case TN3270EParser.COMMAND_READ_MODIFIED: // 246
             case 6:
             case 54:
 		logger.debug("-- Type=READ_MODIFIED");
 		this.Vs.zs = 1;
-		this.doReadModified(this.Ls.Bs); 
+		this.doReadModified(this.Ls.aid); 
 		break;
             case TN3270EParser.COMMAND_READ_MODIFIED_ALL: // 110
             case 14:
             case 62:
 		logger.debug("-- Type=READ_MODIFIED_ALL");
 		this.Vs.zs = 1;
-		this.doReadModifiedAll(this.Ls.Bs); 
+		this.doReadModifiedAll(this.Ls.aid); 
 		break;
             case TN3270EParser.COMMAND_WRITE_STRUCTURED_FIELD:
 		logger.debug("-- Type=WRITE_STRUCTURED_FIELD");
@@ -3354,8 +3377,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     ir(t:string):number{ // lc.prototype.ir = function (t) {
-	this.Ls.Bs = VirtualScreen3270.nh[t]; // NEEDSWORK global nh
-	return this.Ls.Bs; // INTERIM LS.Bs
+	this.Ls.aid = VirtualScreen3270.nh[t]; // NEEDSWORK global nh
+	return this.Ls.aid; // INTERIM LS.Bs
     }
 
     static qCommands = ["Cursor Up", "Cursor Right", "Rapid Right", "Cursor Down", "Cursor Left", "Rapid Left", "Tab", "Home", "End", "New Line", "Backspace", "Back Tab"]; // was global "q"
@@ -4067,7 +4090,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     _h(t:number){ //  (lc.prototype._h = function (t) {
 	let logger = Utils.protocolLogger;
 	if (!t || (TN3270EParser.AID_STRUCTURED_FIELD == t)){
-	    t = 96;
+	    t = TN3270EParser.AID_NO_AID;
 	}
 	// n/l type ambiguities
 	var l = this.partitionInfoMap[this.currentPartitionID];
@@ -4693,29 +4716,35 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     buildImplicitPartitionReply(t:number,l:number):Uint8Array{ // (lc.prototype.Rh = function (t, l) {
 	var n = new Uint8Array(13);
-	(n[0] = 0), (n[1] = 0), (n[2] = 11), (n[3] = 1),
-	(n[4] = 0), (n[5] = 0), (n[6] = 80), (n[7] = 0),
-	(n[8] = 24), (n[9] = (t >> 8) & 255), (n[10] = 255 & t), (n[11] = (l >> 8) & 255),
+	(n[0] = 0),
+	(n[1] = 0),
+	(n[2] = 11),
+	(n[3] = 1),
+	(n[4] = 0),
+	(n[5] = 0),
+	(n[6] = 80),
+	(n[7] = 0),
+	(n[8] = 24),
+	(n[9] = (t >> 8) & 255),
+	(n[10] = 255 & t),
+	(n[11] = (l >> 8) & 255),
 	(n[12] = 255 & l);
 	return n;
     }
-    
-    buildUsableAreaReply(t:number, l:number):Uint8Array{ // lc.prototype.yh = function (t, l) {
+
+    buildUsableAreaReply(t:number, l:number):Uint8Array{
 	var n = new Uint8Array(19);
-	(n[0] = 3),
-	(n[1] = 0),
-	(n[2] = (t >> 8) & 255),
-	(n[3] = 255 & t),
-	(n[4] = (l >> 8) & 255),
-	(n[5] = 255 & l),
-	(n[6] = 1);
-	if (this.canvas == null){
+	(n[0] = 3), (n[1] = 0), (n[2] = (t >> 8) & 255), (n[3] = 255 & t), (n[4] = (l >> 8) & 255), (n[5] = 255 & l), (n[6] = 1);
+	var i = window.screen.height,
+        e = window.screen.width;
+
+        var s,u;
+	if (this.canvas){
+	    s = this.canvas.height * ((l - 2) / l),
+            u = this.canvas.width;
+	} else {
 	    throw "No canvas during buildUsableAreaReply";
 	}
-	var i = window.screen.height,
-            e = window.screen.width,
-            s = this.canvas.height * ((l - 2) / l),
-            u = this.canvas.width;
 	return (
             (n[7] = 2),
             (n[8] = 56),
@@ -4732,6 +4761,55 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             n
 	);
     }
+
+    
+    buildUsableAreaReply_new(altWidth:number, altHeight:number):Uint8Array{ // lc.prototype.yh = function (t, l) {
+	console.log("JOE usable: altW="+altWidth+" altHeight="+altHeight);
+	let reply = new Uint8Array(19);
+	let headerSize = 4;
+	let writeU16 = function(offset:number,v:number):void {
+	    reply[offset-headerSize] = (v>>8)&0xFF;
+	    reply[offset-headerSize+1] = v&0xFF;
+	};
+	// subtracting header size to better correspond to the 3270 
+	reply[4-headerSize] = 3;    // flags - means allows 12/14/16 addressing  
+	reply[5-headerSize] = 0;    // flags - no variable cells, matrix-characters, values in next two fields, cels, not pels
+	// width of usable area in cells or pells;
+	writeU16(6,altWidth);
+	writeU16(8,altHeight);
+	// units
+	reply[10-headerSize] = 1;   // 00 means pels per inch, 01 means pels per millimeters
+	if (this.canvas == null){
+	    throw "No canvas during buildUsableAreaReply";
+	}
+	// the next 10-15 lines look like the most horrific bullshit in the history of bullshit
+	// and why are we using (668 / screenWidth) millimeters
+	// why is height numerator 308?  What chicanery is this?
+	// so I think that this does not affect GDDM behavior too much
+	var i = window.screen.height; 
+        var e = window.screen.width;
+	// 11 thru 14 are a fraction of (distance between x points in UNITS)
+        reply[11-headerSize] = 2;
+        reply[12-headerSize] = 56;
+	writeU16(13,e);
+	// 15 thru 18 are a fraction of (distance between x points in UNITS)
+	reply[15-headerSize] = 1;
+        reply[16-headerSize] = 62;
+	writeU16(17,i);
+	let s = this.canvas.height * ((altHeight - 2) / altHeight);  // is this an OIA hack??
+        let u = this.canvas.width;
+	let horizontalPixelsPerChar = Math.round(u / altWidth); // rough pixels per character as rendered
+	let verticalPixelsPerChar = Math.round(s / altHeight); // rough pixels per character as rendered
+	reply[19-headerSize] = horizontalPixelsPerChar;
+	reply[20-headerSize] = verticalPixelsPerChar;
+	// Per Book:  "for LU  Type  1,  the  BUFFSZ parameter is  not applicable  and  should be  set  to  X' 0000'"
+        reply[21-headerSize] = 0,
+        reply[22-headerSize] = 0;
+	// I have some belief that (altWidth * horizontalPixelsPerChar) = width for graphics (GOCA) drawing,
+	// and likewise for height
+	// more fields needed here if variable size cells are specified in flags
+        return reply;
+    }
     
     buildCharacterSetReply():Uint8Array{ // (lc.prototype.Ch = function () {
 	var t,
@@ -4747,11 +4825,29 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     static buildCodeSummaryReply(isDBCS:boolean):number[]{ // (lc.Ph = function (t) {
-	var l = [129, 166, 134, 135, 136, 153, 133, 149, 132, 128, 150, 168, 176, 177, 178, 179, 180, 138];
+	let codes = [0x81, // 129 - usable area
+		     0xA6, // 166 - implicit partition
+		     0x86, // 134 - color
+		     0x87, // 135 - highlighting
+		     0x88, // 136 - reply modes
+		     0x99, // 153 - auxiliary device
+		     0x85, // 133 - character sets
+		     0x95, // 149 - Dist Data Management (Why?)
+		     0x84, // 132 - Alhpanumeric Partitions
+		     0x80, // 128 - Code Summay itself
+		     0x96, // 150 - Storage Pools
+		     0xA8, // 168 - Transparency
+		     0xB0, // 176 - Segment (Graphics)
+		     0xB1, // 177 - Procedure (Graphics)
+		     0xB2, // 178 - LineTypes (Graphics)
+		     0xB3, // 179 - Port      (Graphics IO??)
+		     0xB4, // 180 - Graphics Color (Graphics)
+		     0x8A]; // 138 - Field Validation (Really??, if so what and how)
+	// var l = [129, 166, 134, 135, 136, 153, 133, 149, 132, 128, 150, 168, 176, 177, 178, 179, 180, 138];
 	if (isDBCS){
-	    l.push(145);
+	    codes.push(0x91); // 145 DBCS_ASIA
 	}
-	return l;
+	return codes;
     }
 
     /*
@@ -4777,6 +4873,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    qReply.addByte(0xFF & seqNum);
 	}
 	qReply.addByte(0x88);
+	// this use of alternate is probably more bold/arbitrary/expedient/wrong than I originally thought
 	var s = this.getAlternateHeight();
 	var u = this.getAlternateWidth();
 	console.log("JOE doQueryReply with specificCodes="+JSON.stringify(specificCodes));
@@ -4807,8 +4904,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             qReply.addCodeReply(QReply.CODE_DISTRIBUTED_DATA_MANAGEMENT, QReply.standardDDMReply);
 	    qReply.addCodeReply(QReply.CODE_FIELD_VALIDATION, QReply.standardValidationReply);
 	    qReply.addCodeReply(QReply.CODE_ALPHANUMERIC_PARTITIONS, QReply.standardAlphanumericPartitionsReply);
-            var f = VirtualScreen3270.buildCodeSummaryReply(this.charsetInfo.isDBCS);
-            qReply.addCodeReply(QReply.CODE_SUMMARY, f);
+            let summaryReply = VirtualScreen3270.buildCodeSummaryReply(this.charsetInfo.isDBCS);
+            qReply.addCodeReply(QReply.CODE_SUMMARY, summaryReply);
 	    this.buildRPQReply() && w++;
 	} else {
 	    usableAreaReply = this.buildUsableAreaReply(u, s);
@@ -4966,21 +5063,26 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	if (this.websocket){
 	    Utils.messageLogger.debug("Sending message with data:");
 	    Utils.hexDumpU8(qReply.data, Utils.messageLogger);
-	    qReply.addByte(255);
-	    qReply.addByte(239);
-	    this.sendBytesU8(qReply.data.slice(0, qReply.fill));
+	    // experiment cut these bytes
+	    //qReply.addByte(255);
+	    //qReply.addByte(239);
+	    //this.sendBytesU8(qReply.data.slice(0, qReply.fill));
+	    console.log("JOE new send qreply");
+	    let replyTelnetBytes = qReply.getTelnetBytes();
+	    this.sendBytes(replyTelnetBytes);
+	    // end experiment send
 	    this.Su(2);
 	}
 	logger.debug("Query reply generated and sent");
 	Utils.hexDumpU8(qReply.data.slice(0, qReply.fill),logger);
     }
     
-    handleStructuredField(t:any){ //(lc.prototype.Mh = function (t) {
+    handleStructuredField(t:any):void{ //(lc.prototype.Mh = function (t) {
 	let logger = Utils.protocolLogger;
-	var l,
-            n = t.xe;
-	for (logger.debug("Handling structured field. Fields length=" + n.length), l = 0; l < n.length; l++) {
-            var i = n[l];
+	let structuredFields:any[] = t.structuredFields; // was n = t.xe;
+	logger.debug("Handling structured field. Fields length=" + structuredFields.length);
+	for (let l = 0; l < structuredFields.length; l++) {
+            var i = structuredFields[l];
             if ((logger.debug("-- Structured Field="+i), 1 === i.key)) {
 		if (TN3270EParser.STRFLD_READ_PARTN_QUERY === i.sub || TN3270EParser.STRFLD_READ_PARTN_QUERY_LIST === i.sub) {
                     var e = i.Uh,
@@ -5003,39 +5105,48 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		logger.debug("---- Type=OUTBOUND_DATASTREAM");
 		var u = i.Qh;
 		this.handleWriteCommand(u);
-            } else
-		TN3270EParser.STRFLD_SET_REPLY_MODE === i.key 
-		? i.Bh > 0
-		? logger.warn("Partitions above 0 (implicit) not yet implemented")
-		: i.mode < 0 || i.mode > 2
-		? logger.warn("Cannot set field mode to type=" + i.mode)
-		: ((this.replyMode = i.mode), logger.debug("---- reply mode is " + i.mode))
-            : TN3270EParser.STRFLD_RESET_PARTN === i.key
-		? this.Yu(i.Bh) && ((this.replyMode = VirtualScreen3270.REPLY_MODE_FIELD),
-				    (this.currentPartitionID = i.Bh),
-				    (this.Ls.replyMode = VirtualScreen3270.REPLY_MODE_FIELD),
-				    (this.Ls.Ws = 0),
-				    (this.Ls.Qs = 0),
-				    logger.debug("---- reply mode is 0"))
-		: TN3270EParser.STRFLD_OBJECT_DATA  === i.key || TN3270EParser.STRFLD_OBJECT_PICTURE === i.key || TN3270EParser.STRFLD_OBJECT_CONTROL === i.key            ?  (i.flags, logger.debug("---- Type=FIELD_OBJECT"))
-		: (TN3270EParser.STRFLD_CREATE_PARTN  === i.key
-		   ? (0 == this.partitionState ? (this.partitionInfoMap[0] && delete this.partitionInfoMap[0],
-				      (this.partitionState = 1),
-				      (this.currentPartitionID = i.Bh)) :
-		      this.partitionInfoMap[i.Bh] && delete this.partitionInfoMap[i.Bh],
-                      logger.debug("---- Type=CREATE_PARTITION"),
-                      logger.debug("---- ID=" + i.Bh),
-                      logger.debug("New partition count=" + Object.keys(this.partitionInfoMap).length),
-                      (this.partitionInfoMap[i.Bh] = i))
-		   : 1 & t.key && (this.Me = true),
-		   logger.warn("Unimplemented Structured field type t=" + i.t + ", key=" + i.key));
+            } else if (TN3270EParser.STRFLD_SET_REPLY_MODE === i.key){
+		if (i.Bh > 0){
+		    logger.warn("Partitions above 0 (implicit) not yet implemented");
+		} else if (i.mode < 0 || i.mode > 2){
+		    logger.warn("Cannot set field mode to type=" + i.mode);
+		} else {
+		    this.replyMode = i.mode;
+		    logger.debug("---- reply mode is " + i.mode);
+		}
+	    } else if (TN3270EParser.STRFLD_RESET_PARTN === i.key){
+		this.Yu(i.Bh) && ((this.replyMode = VirtualScreen3270.REPLY_MODE_FIELD),
+				  (this.currentPartitionID = i.Bh),
+				  (this.Ls.replyMode = VirtualScreen3270.REPLY_MODE_FIELD),
+				  (this.Ls.Ws = 0),
+				  (this.Ls.Qs = 0),
+				  logger.debug("---- reply mode is 0"));
+	    } else if ((TN3270EParser.STRFLD_OBJECT_DATA  === i.key) ||
+		(TN3270EParser.STRFLD_OBJECT_PICTURE === i.key) ||
+		(TN3270EParser.STRFLD_OBJECT_CONTROL === i.key)){
+		i.flags;
+		logger.debug("---- Type=FIELD_OBJECT");
+	    } else if (TN3270EParser.STRFLD_CREATE_PARTN  === i.key){
+		(0 == this.partitionState ? (this.partitionInfoMap[0] && delete this.partitionInfoMap[0],
+					     (this.partitionState = 1),
+					     (this.currentPartitionID = i.Bh)) :
+		    this.partitionInfoMap[i.Bh] && delete this.partitionInfoMap[i.Bh]);
+		logger.debug("---- Type=CREATE_PARTITION");
+                logger.debug("---- ID=" + i.Bh);
+                logger.debug("New partition count=" + Object.keys(this.partitionInfoMap).length);
+                (this.partitionInfoMap[i.Bh] = i);
+	    } else {
+		// JOE doesn't really like this next line, but hey, whatever;
+		1 & t.key && (this.Me = true);
+		logger.warn("Unimplemented Structured field type t=" + i.t + ", key=" + i.key);
+	    }
 	}
     }
     
     jh(){ // (lc.prototype.jh = function () {
 	let t;
 	this.cacheFieldDataMap();
-	(this.Ls.Bs = 96), (this.Me = true), (this.Ls._s = 32);
+	(this.Ls.aid = TN3270EParser.AID_NO_AID), (this.Me = true), (this.Ls._s = 32);
 	let l,
             n = 0,
             i = 0,
@@ -5087,9 +5198,7 @@ class QReply { // was nc
 	this.addByte((len >> 8) & 0xFF);
 	this.addByte(len & 0xFF);
 	this.addByte(TN3270EParser.STRFLD_QUERY_REPLY);
-	console.log("JOE: the qCode is "+Utils.hexString(qCode));
 	this.addByte(qCode);
-	console.log("JOE: there it is "+this.data[this.fill-1]);
 	for (var n = 0; n < dataBytes.length; n++) this.addByte(dataBytes[n]);
     }
 
@@ -5098,17 +5207,31 @@ class QReply { // was nc
 	this.addByte((len >> 8) & 0xFF);
 	this.addByte(len & 0xFF);
 	this.addByte(TN3270EParser.STRFLD_QUERY_REPLY);
-	console.log("JOE: the qCode is "+Utils.hexString(qCode));
 	this.addByte(qCode);
-	console.log("JOE: there it is "+this.data[this.fill-1]);
 	for (var n = 0; n < dataBytes.length; n++) this.addByte(dataBytes[n]);
+    }
+
+    getTelnetBytes():number[]{ // (nc.prototype.Th = function () {
+	Utils.coreLogger.debug("binaryBuffer fill was " + this.fill);
+	var t:number[] = new Array();
+	for (var n = 0; n < this.data.length && n !== this.fill; n++){
+	    let b = this.data[n];
+	    Utils.pushTelnetByte(t,b);
+	    // t.push(this.data[n]);
+	}
+	// add standard trailer
+	t.push(0xFF);
+	t.push(0xEF);
+	return t;
     }
 
     toB64():string{ // (nc.prototype.Th = function () {
 	Utils.coreLogger.debug("binaryBuffer fill was " + this.fill);
-	var t = new Array();
+	var t:number[] = new Array();
 	for (var n = 0; n < this.data.length && n !== this.fill; n++){
-	    t.push(this.data[n]);
+	    let b = this.data[n];
+	    Utils.pushTelnetByte(t,b);
+	    // t.push(this.data[n]);
 	}
 	return window.btoa(String.fromCharCode.apply(null, t));
     }
@@ -5132,6 +5255,18 @@ class QReply { // was nc
     static CODE_FIELD_OUTLINING            = 0x8C;
     static CODE_PARTITION_CHARACTERISTICS  = 0x8E;
     static CODE_OEM_AUXILIARY_DEVICE       = 0x8F;
+      /*
+	Good example in https://www.ibm.com/docs/en/personal-communications/5.9?topic=programming-query-reply-data-structures-supported-by-ehllapi
+
+	Length 0-1
+        0x81
+	0x8F
+        <flag1>
+        <flag2>
+        <deviceType> - 8 bytes
+        <userAssignedName> - 8 bytes
+        ....
+       */
     static CODE_FORMAT_PRESENTATION        = 0x90;
     static CODE_DBCS_ASIA                  = 0x91;
     static CODE_SAVE_RESTORE_FORMAT        = 0x92;
@@ -5143,6 +5278,18 @@ class QReply { // was nc
     static CODE_AUXILIARY_DEVICE           = 0x99;
     static CODE_3270_IPDS                  = 0x9A;
     static CODE_PRODUCT_DEFINED_DATA_STREAM= 0x9C;
+    /* see PCOMM
+        5080 is mentioned
+	5080 Graphics System:
+
+	This reference ID indicates the 5080 Graphics System data
+	stream is supported by the auxiliary device. Descriptions of
+	the 5080 Graphics Architecture, structured field, subset ID,
+	DOID, and associated function sets are defined in IBM 5080
+	Graphics System Principles of Operation 
+
+	http://bitsavers.org/pdf/ibm/5080/GA23-0134-0_IBM_5080_Graphics_Systems_Principles_of_Operation_Mar1984.pdf
+    */
     static CODE_ANOMALY_IMPLEMENTATION     = 0x9D;
     static CODE_IBM_AUXILIARY_DEVICE       = 0x9E;
     static CODE_BEGIN_END_OF_FILE          = 0x9F;
@@ -5155,6 +5302,9 @@ class QReply { // was nc
     static CODE_SETTABLE_PRINTER_CHARACTERISTICS  = 0xA9;
     static CODE_IOCA_AUXILIARY_DEVICE             = 0xAA;
     static CODE_COOPERATIVE_PROCESSING_REQUESTOR  = 0xAB;
+    /*
+      See PCOMM doc ref'ed above
+     */
     static CODE_SEGMENT                    = 0xB0;
     static CODE_PROCEDURE                  = 0xB1;
     static CODE_LINE_TYPES                 = 0xB2;
@@ -5164,9 +5314,36 @@ class QReply { // was nc
     static CODE_GRAPHIC_SYMBOL_SETS        = 0xB6;
     static CODE_NULL                       = 0xFF;
 
-    static standardTransparencyReply = [2, 0, 240, 255, 255]; // ws Eh
     static standardProcedureReply = [0, 1, 0, 0, 0, 252, 0, 6, 64, 6, 64, 6, 1, 255, 255, 255, 255]; // was yh
+    /*	
+	The procedure QReply is not documented in the 3270 data stream guide
+ 
+     */
+
     static standardSegmentReply = [0, 4, 0, 252, 0, 252, 0, 5, 2, 0, 128, 0, 5, 2, 4, 128, 0, 5, 2, 11, 128, 0]; // was Sh
+    /*	
+	The segment QReply is not documented in the 3270 data stream guide
+	The second byte 0x04, is probably the graphics capability level
+
+	Interesting stuf at IBM PCOMM doc:
+	https://www.ibm.com/docs/en/personal-communications/5.9?topic=programming-query-reply-data-structures-supported-by-ehllapi
+     */
+
+    static standardStoragePoolsReply = [19, 1, 1, 0, 0, 80, 0, 0, 0, 80, 0, 0, 1, 0, 5, 0, 6, 0, 7]; // was mh
+    /* 
+       Storage pools 
+       This reply seems to be a single SDPID length = 19
+       0x1 - means storage pool
+       0x1 - id
+       0x00008000  - size empty     - JOE we could say infinity nowadays, or maybe 0x7FFFFFFF
+       0x00008000  - size available 
+       oblist (0001 segment) (0005 Temp) (0006 line type) (0007 symbol set) - why does this not say procedure or extended drawing routine?
+     */
+    
+    static standardLineTypesReply = [0, 9, 0, 7, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 3, 1, 64, 3, 2, 255]; // was Ph
+
+
+    static standardTransparencyReply = [2, 0, 240, 255, 255]; // ws Eh  
     static standardColorReply = [0, 8, 0, 244, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 246, 246, 247, 247]; // was uh
     static standardHighlightingReply = [4, 0, 240, 241, 241, 242, 242, 244, 244]; // was hh
     static standardReplyModesReply = [0, 1, 2]; // was rh (field,extended,character)
@@ -5177,8 +5354,6 @@ class QReply { // was nc
     static standardDDMReply = [0, 0, 8, 0, 8, 0, 1, 1]; // was wh
     static standardValidationReply = [7]; // was vh
     static standardAlphanumericPartitionsReply = [0, 30, 240, 0]; // was ph
-    static standardStoragePoolsReply = [19, 1, 1, 0, 0, 80, 0, 0, 0, 80, 0, 0, 1, 0, 5, 0, 6, 0, 7]; // was mh
-    static standardLineTypesReply = [0, 9, 0, 7, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 3, 1, 64, 3, 2, 255]; // was Ph
     static standardCodePortReply1 = [0, 3, 2, 144, 9, 1, 0, 3, 2, 128, 0, 127, 255]; // was Ih
     static standardCodePortReply2 = [0, 7, 8, 64, 7, 3, 0, 1, 0, 0, 28]; //was Dh
     static standardGraphicColorReply = [0, 4, 0, 1, 255, 0, 8, 0, 8, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 0, 3, 1, 1, 0, 0, 0, 4, 0, 0, 1, 0, 0, 5, 0, 1, 1, 0, 0, 6, 1, 0, 1, 0, 0, 7, 1, 1, 1, 0]; // was xh
@@ -5618,6 +5793,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
 	BaseRenderer.setFillColor(ctx, this.Jl);
 	screen.cacheFieldDataMap();
         let logicalWidth = screen.width; // was s
+	console.log("JOEPainting for screen size=" + screen.size+" logWidth="+logicalWidth);
         let unicodeArray:number[] = new Array(logicalWidth) // was u
         let colorArray:number[] = new Array(logicalWidth); // was h
         let renderingFlagsArray:number[] = new Array(logicalWidth); // was r
@@ -5723,6 +5899,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
 				    BaseRenderer.drawCharArraySlice(ctx, unicodeArray, charIndex, runLength, S, v);
 				}
 			    } else {
+				// console.log("JOE guess drawCharArraySlice charIndex="+charIndex+" X="+S+" Y="+v);
 				BaseRenderer.drawCharArraySlice(ctx, unicodeArray, charIndex, runLength, S, v);
 			    }
 			}

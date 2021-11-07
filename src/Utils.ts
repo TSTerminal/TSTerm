@@ -120,7 +120,11 @@ export class Utils {
         var length  = lengthArg || byteArray.length; // h
         var r = "";
         for (s = 0; s < length; s++){
-	    r += Utils.hexString(byteArray[offset + s]) + " ";
+	    let hexDigits = Utils.hexString(byteArray[offset + s]);
+	    if (hexDigits.length == 1){
+		hexDigits = "0"+hexDigits;
+	    }
+	    r += (hexDigits+ " ");
 	    if (s % 16 == 15){
 		if (logger && logger.debug){
 		    logger.debug(r);

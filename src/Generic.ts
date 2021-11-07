@@ -855,6 +855,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
     }
     
     resize(width:number, height:number, suppressRedraw?:boolean) { // (ko.prototype.resize = function (t, n, i) {
+	console.log("JOE Generic.resize width="+width+" height="+height);
 	this.width = width;
 	this.height = height;
 	this.size = width * this.height;
