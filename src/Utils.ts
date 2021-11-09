@@ -174,6 +174,9 @@ export class Utils {
     //Rr = window.COM_RS_COMMON_LOGGER.makeComponentLogger("org.zowe.terminal.core.color");
     static colorLogger:ComponentLogger = new ComponentLogger("TerminalColor");
 
+    static graphicsLogger:ComponentLogger = new ComponentLogger("Graphics").setLevel(4);
+    
+    
     static superClassWarning(t:any):void{  // minified as bo(t){
 	alert(t + ": You are in the superclass!");
     }

@@ -1689,7 +1689,8 @@ export class TN3270EParser{  // minified as ic
 		    charHeightInPoints = Utils.readU16(t, e + 28),
                     S = TN3270EParser.Na(t, ell, 30, a - 30, TN3270EParser.Y, 2); // Self-defining parm stuff
 		let screenWidth = this.screen.getAlternateWidth(),
-                    screenHeight = this.screen.getAlternateHeight(); 
+                    screenHeight = this.screen.getAlternateHeight();
+		console.log("JOE sw="+screenWidth+" pw="+presentationW+" sh="+screenHeight+" ph="+presentationH);
 		if (screenWidth < presentationW || screenHeight < presentationH) {
                     let t = { type: "create_partition_was_ra", code: "763", status: !1, gs: "1005" };
                     this.screen.oh(this.screen.$s, t); 
@@ -1720,6 +1721,12 @@ export class TN3270EParser{  // minified as ic
 		break;
             case TN3270EParser.STRFLD_PCLK_PROTOCOL:
 	        logger.debug("Ignoring PCLK_PROTOCOL Structured field");
+		    break;
+	    case TN3270EParser.STRFLD_DESTINATION_ORIGIN:
+	        logger.debug("Ignoring DESTINATION_ORIGIN Structured field");
+		break;
+	    case TN3270EParser.STRFLD_OEM_DATA:
+	        logger.debug("Ignoring OEM_DATA Structured field");
 		break;
             case TN3270EParser.STRFLD_OBJECT_DATA:
             case TN3270EParser.STRFLD_OBJECT_PICTURE:
@@ -2052,8 +2059,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     Cu:any;
     na:any; // something to do with keepAlive
     Vu:any;
-    Dh:any; // probably obsolete, only set, never used
-    xh:any; // probably obsolete, only set, never used
+    graphicsWidth:number = 0; // probably obsolete, only set, never used
+    graphicsHeight:number = 0; // probably obsolete, only set, never used
     Iu:any; // OIA stuff?
     Tr:any[] = [];  // probably obsolete, only set, never used
     Sr:boolean = false; // probably obsolete, only set, never used
@@ -2471,11 +2478,13 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     getAlternateWidth():number{ // (lc.prototype.vu = function () {
-	return (this.deviceType ?
-		(this.deviceType === DeviceType3270.ps && this.inTN3270EMode ?  // IBM-DYNAMIC
-		 this.alternateWidth :
-		 this.deviceType.width) :
-		80);
+	if (this.deviceType){
+	    return (this.deviceType === DeviceType3270.ps && this.inTN3270EMode ?  // IBM-DYNAMIC
+		this.alternateWidth :
+		this.deviceType.width);
+	} else {
+	    return 80;
+	}
     }
 
     getAlternateHeight():number{ // (lc.prototype.pu = function () {
@@ -2977,7 +2986,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     handleErase(blockResize:boolean, isAlternateSize:boolean){ // (lc.prototype.Hu = function (t, l) {
-	this.clear(); 
+	this.clear();
+	this.graphicsState = new GraphicsState();
 	this.bufferPos = 0; 
 	this.setCursorPos(0); 
 	if (!blockResize) {
@@ -4882,8 +4892,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    var h = this.renderer ? this.renderer.charWidth : 9,
 		r = this.renderer ? this.renderer.charHeight : 12,
 		usableAreaReply = this.buildUsableAreaReply(u, s);
-            this.Dh = u * h;
-	    this.xh = s * r;
+            this.graphicsWidth = u * h;
+	    this.graphicsHeight = s * r;
 	    qReply.addU8CodeReply(QReply.CODE_USABLE_AREA, usableAreaReply);
 	    logger.debug("Query reply early");
 	    Utils.hexDumpU8(qReply.data.slice(0, qReply.fill),logger);
@@ -5926,7 +5936,12 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
 	    v += this.charHeight;
         }
         this.ml();
-	this.Fn();
+	if (canvas){
+	    this.renderGraphics(canvas,
+				screen.graphicsState,
+				screen.graphicsWidth,screen.graphicsHeight,
+				this.activeWidth,this.activeHeight);
+	}
     }
 
     // gather group of similar characters, drawing-attr and colorwize
@@ -6052,8 +6067,43 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
         4 & n && BaseRenderer.drawLine(ctx, o, h, o + r * this.charWidth, h);
     }
     
-    Fn(t?:any){ //     (Ya.prototype.Fn = function (t) {
-        Utils.renderLogger.debug("NYI: 2DG");
+    renderGraphics(canvas:HTMLCanvasElement,  // Ya.prototype.Fn - but with more arguments!
+		   graphicsState:GraphicsState,
+		   graphicsWidth:number,
+		   graphicsHeight:number,
+		   activeWidth:number,
+		   activeHeight:number){  // what are the active (text-background) dimensions
+	let logger = Utils.renderLogger;
+	let canvasWidth = canvas.width;
+	let canvasHeight = canvas.height;
+	console.log("JOEG in rg()");
+	let ctx:CanvasRenderingContext2D|null = canvas.getContext("2d");
+	if (!ctx){
+	    logger.warn("cannot render graphics without 2d ctx");
+	    return;
+	}
+	if (!graphicsWidth || !graphicsHeight){
+	    logger.warn("cannot render without graphics dimensions set");
+	    return;
+	}
+	if (!activeWidth || (activeWidth <= 0) || !activeHeight || (activeHeight <= 0)){
+	    logger.warn("cannot render without active (font-metrics-based) dimensions set");
+	    return;
+	}
+	console.log("JOEG about to render graphics");
+
+	try {
+	    ctx.save(); // in case this CTX is *exactly* the same object as any other result of canvas.getContext("2d")
+	    graphicsState.render(ctx,
+				 graphicsWidth,
+				 graphicsHeight,
+				 activeWidth,
+				 activeHeight);
+	} catch (e){
+	    logger.warn("Graphics render failed "+e);
+	} finally {
+	    ctx.restore();
+	}
     }
 
 }
