@@ -1,8 +1,36 @@
 import { Exception,Utils } from "./utils.js";
-import { CharacterAttributes, FieldData, KeyboardMap, 
+import { CharacterAttributes, FieldData, KeyboardMap, RowAndColumn, 
 	 VirtualScreen, OIALine, CharsetInfo, BaseRenderer } from "./generic.js";
 import { ScreenElement, PagedVirtualScreen, PagedRenderer } from "./paged.js";
 import { GraphicsState } from "./graphics.js";
+
+class Ebcdic {
+
+    /* 
+       static th = 28; // what is this?? EBCDIC IFS?, ASCII FS
+       static lh = 30; // Field mark, record separator, was lh
+    */
+    static fieldMark = 28; // was th, See EBCDIC docs
+    static recordMark = 30; // was lh
+    static hyphen = 0x60;
+    static specialMarks = [ 28, 30]; // keep in sync with above definitions
+    static boxTRight = 0xC6;
+    static boxTUp   = 0xC7;
+    static boxCrossedLines = 0xD3;
+    static boxTLeft = 0xD6;
+    static boxTDown = 0xD7;
+    static boxHLine = 0xA2;
+    static boxLowLCorner = 0xC4;
+    static boxLowRCorner = 0xD4;
+    static boxTopLCorner = 0xC5;
+    static boxTopRCorner = 0xC6;
+}
+
+class Unicode {
+    static euro = 0x20AC;  // 8364
+    static space2000 = 0x2000; // 8192
+
+}
 
 class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
     classicBits:number;
@@ -616,6 +644,10 @@ export class TN3270EParser{  // minified as ic
           "UNSUPPORTED-REQ": "The server is unable to satisfy a client request.",
           UNKNOWN: "Unknown error."
     }
+
+    static WCC_ALARM = 0x04;
+    static WCC_KEYBOARD_RESTORE = 0x02;
+    static WCC_MDT_RESET = 0x01;
 
     static COMMAND_WRITE = 0xF1; // 241
     static COMMAND_WRITE_LOCAL = 0x01;
@@ -1593,7 +1625,7 @@ export class TN3270EParser{  // minified as ic
         case TN3270EParser.COMMAND_ERASE_ALL_UNPROTECTED_ASCII:
 	    // this is so irregular, some cases return values,
 	    // others do things immediately, blecch.
-            this.screen.jh(); // NEEDSWORK
+            this.screen.handleEraseAllUnprotected(); // NEEDSWORK
             break;
 	case TN3270EParser.COMMAND_WRITE_STRUCTURED_FIELD: // 243
 	case TN3270EParser.COMMAND_WRITE_STRUCTURED_FIELD_LOCAL:
@@ -1980,35 +2012,6 @@ export class TN3270EParser{  // minified as ic
     }
 
 
-
-    
-    /*
-      ic.prototype.oa(t) 
-         - t is an array of small numbers
-         - only called from ic.prototype.ca 
-      ic.prototype.ca()
-         - something about protocol negotiation, device type choice
-      ic.prototype.fa(t) 
-         - t is an integer going into a switch
-         - alerts with differentMessages on negotiationFailure
-      ic.prototype.wa(t) 
-         - t is an integer, probably a Telnet option code or verb
-         - could be called handleTelnetOption
-      ic.prototype.Ra(t)
-      ic.Na(t,l,n,i,e,s)
-        - static method
-      ic.prototype.Pa(t, l, n, i, e)
-        - some unhandled parsing case of object structured field
-      ic.prototype.Ta(t, l, n, i) 
-        - t is an array, l and n are (start,end) 
-        - handle structured field, by tracing
-      ic.Ia(t,l)
-        - static method
-      ic.Da(t, l , n)
-        - static method
-      ic.prototype.xa(t, l, n)
-     */
-
 }
 
 export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
@@ -2064,7 +2067,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     Iu:any; // OIA stuff?
     Tr:any[] = [];  // probably obsolete, only set, never used
     Sr:boolean = false; // probably obsolete, only set, never used
-    Xr:any;  // something that only seem to be used in demo code
+    latestDemoScreenContext:any;  // something that only seem to be used in demo code
 
     // Graphics extensions
     graphicsState:GraphicsState = new GraphicsState();
@@ -2503,8 +2506,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	Utils.eventLogger.debug("triple click in 3270 is not implemented");
     }
 
-    // probably setDeviceType
-    Au(t:any):void{ // (lc.prototype.Au = function (t) {
+    setDeviceType(t:any):void{ // (lc.prototype.Au = function (t) {
 	if (t && (t.type > 0 && t.type <= 9)){
 	    this.deviceType = t;
 	} else {
@@ -2512,15 +2514,15 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
     }
 
-    bu():any{ // (lc.prototype.bu = function () {
+    getDeviceType():any{ // (lc.prototype.bu = function () {
 	return this.deviceType;
     } 
 
-    gu():any{ // lc.prototype.gu = function () {
+    getAutomationProperties():any{ // lc.prototype.gu = function () {
 	return { shortName: this.shortName,
 		 longName: this.longName,
 		 sessionType: this.sessionType,
-		 eabSupport: !0,
+		 eabSupport: !0, // see EHLLAPI IBM Doc
 		 pssSupport: !1,
 		 rows: this.height,
 		 columns: this.width,
@@ -2531,7 +2533,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     mu(coords:any, position:number):void{ // (lc.prototype.mu = function (t, l) {
 	let logger = Utils.eventLogger;
 	logger.debug("Element at pos=" + position + " is=" + this.screenElements[position]);
-	var n = this.Eu(position); // NEEDSWORK .Eu
+	var n = this.getDemoScreenContextPlus(position); // NEEDSWORK .Eu
 	logger.debug("context is "+JSON.stringify(n));
 	if (!(coords.rows >= this.height || coords.columns >= this.width)){
 	    if (this.convoType !== VirtualScreen3270.convoTypes.NVT){
@@ -2542,7 +2544,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		this.ku();
 	    }
 	    if (this.renderer){
-		this.renderer.ml();
+		this.renderer.redrawTransientElements();
 	    }
 	} else {
 	    console.log("JOE: not setting cursor pos on click!!");
@@ -2554,6 +2556,82 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		screenPos:number):void{ // (lc.prototype.se = function (t, l, n, i) {
 	this.mu(coords, screenPos);
     }
+
+    getScreenContents(t:any,
+		      l:number,
+		      n:number,
+		      i:number,
+		      e:any,
+		      s:any,
+		      u:any,
+		      h:any){ // (lc.prototype.Ci = function (t, l, n, i, e, s, u, h) {
+	let renderer = this.getRenderer3270OrFail("getScreenContents");
+	var r = [];
+        var a = Renderer3270.buildDBCSArray(this);
+	let o = -1 !== navigator.userAgent.indexOf("Windows");
+        let c = renderer.unicodeToEBCDIC(13);
+        let f = renderer.unicodeToEBCDIC(10);
+	let fieldMark = Ebcdic.fieldMark;
+	let recordMark = Ebcdic.recordMark;
+	// iterating on row as d below i
+	for (var d:number = n; d < i; d++) {
+            var w:number = l;
+            var v = t;
+            if (h && (d != i - 1)){  // h means look outside colums, ie, not a square copy bounds
+		w = this.width;
+	    }
+	    if (h && d != n){  // start on start of row if not first row, 
+		v = 0;
+	    }
+            for (var p:number = v; p < w; p++) { // is v a start column? w an end column?
+		var A;
+                var b:number = 0,
+                g = this.getScreenElementRowColumn(d, p);
+		this.isFormatted && (A = this.getFieldDataByPosition(this.rowColZBToScreenPos(d, p), !0));
+		var m = 0; // used to be null
+		let charsetInfo = this.charsetInfo;
+		if (s === true){
+		    m = 0x40;
+		}
+		b = m;
+		if (g)
+                    if ((A && A.isNoDisplay() ? (b = 0x40) : (b = g.charToDisplay()) < 0x40 && ![fieldMark, recordMark].includes(b) && (b = m), 0 == e)) {
+			var E = this.rowColZBToScreenPos(d, p);
+			if (1 == a[E]) {
+                            var k = this.screenElements[E + 1],
+                            S = k ? k.charToDisplay() : 0; // JOE bold, but strongly-typed, defaulting!
+                            (b = null != charsetInfo.Tt && charsetInfo.Tt[0] == b && charsetInfo.Tt[1] == S ? Unicode.euro : charsetInfo.kt[b][S]),
+			    p++;
+			} else if (2 == a[E]) {
+                            var T = this.screenElements[E - 1],
+                            R = T ? T.charToDisplay() : 0; // JOE bold, but strongly-typed, defaulting!
+                            b = null != charsetInfo.Tt && charsetInfo.Tt[0] == R && charsetInfo.Tt[1] == b ? Unicode.euro : charsetInfo.kt[R][b];
+			} else if (g.isGraphic)
+                            if (u)
+                            switch ((b = Renderer3270.graphicEbcdicToUnicode[b])) {
+				case 61569: // 0xF081
+                                    b = 8214; // some CJK char
+                                    break;
+				case 61570: // 0xF082
+                                    b = 9552; // some CJK char
+                                    break;
+				case 61571: // 0xF083
+                                    b = 9144; // some CJK char
+                                    break;
+				case 61572: // 0xF084 
+                                    b = 931; // capital Sigma
+                            }
+			else b = 0x20; // ascii/unicode space
+			else b = b === renderer.St ? Unicode.euro : b === fieldMark ? 42 : b === recordMark ? 59 : renderer.unicodeTable[b];
+                    } else g.isGraphic && r.push(240);
+		else !e && s && (b = 32);
+		r.push(b);
+            }
+            0 == e ? (o && r.push(13), r.push(10)) : (o && r.push(c), r.push(f));
+	}
+	return String.fromCharCode.apply(null, o ? r.slice(0, r.length - 2) : r.slice(0, r.length - 1));
+    }
+
 
     autotype(t:string, l:number){ // (lc.prototype.te = function (t, l) { // GURU second arg is never passed in
 	if (this.renderer) {
@@ -2599,7 +2677,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		    " because the cursor wrapped around to top of screen");
 		this.Su(1);
 		if (this.renderer) {
-		    this.renderer.ml();
+		    this.renderer.redrawTransientElements();
 		    this.renderer.fullPaint();
 		}
 		return false;
@@ -2648,6 +2726,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	let renderer = this.getRenderer3270OrFail("getOIAArray");
 	var t = this.oiaLine.xn;
 	t.fill(0x20); // blanks
+	/*
 	if (VirtualScreen3270.oiaWarnCount < 10){
 	    console.log("JOE HACKS getOIAArray()");
 	    VirtualScreen3270.oiaWarnCount++
@@ -2656,6 +2735,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    console.log("JOE early exit from OIAArray");
 	    return t; // yikes!
 	}
+	*/
 	var l = 0;
 	if ((this.On == co.In ? ((t[l++] = 77), (t[l] = 65)) : this.On == co.Dn && ((t[l++] = OIA_PASSPORT_TE[0]), (t[l++] = OIA_PASSPORT_TE[1])), this.On == co.In)) {
             2 == this.bi.security && (t[3] = 43), this.inInsertMode && (t[51] = 94);
@@ -2735,10 +2815,10 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     // some sort handleLoad, or doPostLoadStuff()
     doPostLoadStuff(){  // (lc.prototype.yu = function () {
 	if (4 !== this.Cu){
-	    this.Me = true;
+	    this.Me = true;  // Me/Xn --  frick and frack
+	    this.Xn = false;
 	    this.Cu = null; 
 	    this.scriptIsRunning = false;
-	    this.Xn = false;
 	    this.Ls.Gs = 0;
 	    this.Vs.zs = 0;
 	}
@@ -2766,7 +2846,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	if (this.oiaEnabled && this.oiaLine){
 	    this.Cu = null;
 	    this.Pu(),
-	    (this.renderer && this.renderer.ml());
+	    (this.renderer && this.renderer.redrawTransientElements());
 	}
     }
 
@@ -2860,7 +2940,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		? (this.Su(1), false)
 		: this.inInsertMode
 	    // JOE - desperate cast on next line
-		? ((l = this.Qu(this.cursorPos, (this.Gu(this.cursorPos, !1, !1, !1) as number), t)) || this.Su(1), l) 
+		? ((l = this.Qu(this.cursorPos, (this.findMatchingFieldNearPosition(this.cursorPos, !1, !1, !1) as number), t)) || this.Su(1), l) 
 		: this.Lu(t)
             : this.inInsertMode
 		? ((l = this.Qu(this.cursorPos, this.cursorPos - 1, t)) || this.Su(1), l)
@@ -2971,7 +3051,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		this.ku();   // NEEDSWORK .ku
 	    }
 	    if (this.renderer){
-		this.renderer.ml();  // NEEDSWORK - but stubbed impl in place
+		this.renderer.redrawTransientElements();  // NEEDSWORK - but stubbed impl in place
 	    }
 	}
     }
@@ -3021,12 +3101,12 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    logger.debug("-- eraseFirst=" + t.eraseFirst);
 	    logger.debug("-- resizeProhibited=" + t.resizeProhibited);
 	    logger.debug("-- useAlternateSize=" + t.useAlternate);
-	    logger.debug("-- WCC=0x" + Utils.hexString(t.wcc))
+	    logger.debug("-- WCC=0x" + Utils.hexString(t.wcc));
             if (t.partitionID != VirtualScreen3270.IMPLICIT_PARTITION && t.partitionID != 0){
 		return void logger.warn("Only IMPLICIT_PARTITION and pid==0 handled currently, pidSeen=" + t.partitionID +
 				    " fullCommand="+t);
 	    }
-	    if ((t.wcc & 1) != 0){
+	    if ((t.wcc & TN3270EParser.WCC_MDT_RESET) != 0){
 		var keys = Object.keys(this.fieldDataMap);
 		for (var n = 0; n < keys.length; n++) {
 		    this.fieldDataMap[keys[n]].clearModified();
@@ -3044,7 +3124,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    this.showScreen();
             console.log("JOE postLoad respdisp="+JSON.stringify(this.responseDisposition)+
 			" wcc=0x"+Utils.hexString(t.wcc));
-	    if (this.responseDisposition.Zs || this.responseDisposition.Js || (t.wcc & 0x02)){
+	    if (this.responseDisposition.Zs || this.responseDisposition.Js || (t.wcc & TN3270EParser.WCC_KEYBOARD_RESTORE)){
 		/* bit 0x02 in the WCC is keyboard enable bit */
 		console.log("JOE postLoad GOOD");
 		this.doPostLoadStuff();             
@@ -3321,7 +3401,6 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     
     processTN3270Command(t:any){ // (lc.prototype.Kh = function (t) {
 	let logger = Utils.protocolLogger;
-	console.log("JOE: ffffff");
 	logger.debug("Processing parsed TN3270 command. ");
 	console.log("JOE command is "+JSON.stringify(t));
 	if (t != null){
@@ -3372,7 +3451,13 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
     }
 
-    uh(t:number[]):void{// (lc.prototype.uh = function (t) {
+    /* 
+       This uh() thing is only used in the NVT support.
+       It calls Renderer.Gl, which seems absolutely nutty.  Maybe this is
+       dead code.
+     */
+
+    nvtSendBytes(t:number[]):void{// (lc.prototype.uh = function (t) {
 	let l = [];
 	for (var n = 0; n < t.length; n++) {
 	    if (this.renderer){ // will be true
@@ -3438,16 +3523,13 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             n = this.ir(fname); // a number, plus side-effects to Ls.Bs
 	console.log("JOE: handleFunction fname="+fname+" n="+n+" this.Me="+this.Me+" this.Vs="+
 		    JSON.stringify(this.Vs));
-	if (n && !0 === this.Me && !this.Vs.zs) { // INTERIM .Vs
-	    console.log("JOE: maybe processing enter 1");
+	if (n && (true === this.Me) && !this.Vs.zs) { // INTERIM .Vs
 	    let temp:number|null = n;
             if (126 === n && !(temp = this.er())){
 		return;
 	    }
 	    n = (temp as number);
-	    console.log("JOE: maybe processing enter 2");
             if (VirtualScreen3270.ih.indexOf(n) > -1 && !this.sr()) return;
-	    console.log("JOE: maybe processing enter 3");
 	    this.ur(n);
 	    if (TN3270EParser.AID_CLEAR_KEY === n){
 		this.clear();
@@ -3492,13 +3574,13 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	else if ("Insert" == fname) {
 	    this.inInsertMode = !this.inInsertMode;
 	    if (this.renderer){
-		this.renderer.ml();
+		this.renderer.redrawTransientElements();
 	    }
 	} else if ("Null" == fname) {
             const thing = 0;
             this.handleEnterSpecialCharacter(thing);
-	} else if ("Dup" == fname) this.handleEnterSpecialCharacter(VirtualScreen3270.th);
-	else if ("Field Mark" == fname) this.handleEnterSpecialCharacter(VirtualScreen3270.lh);
+	} else if ("Dup" == fname) this.handleEnterSpecialCharacter(Ebcdic.fieldMark);  // this looks so messed up
+	else if ("Field Mark" == fname) this.handleEnterSpecialCharacter(Ebcdic.recordMark); // with this having recordMark
 	else if ("Hex Entry" == fname) {
             if (!this.kr()) return false;
             (this._e = []), (this.We = true);
@@ -3584,7 +3666,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	if (this.isFormatted){
             if (!(n = this.getFieldData3270ByPosition(this.cursorPos, true)) || n.attributes.isProtected()) {
 		this.Su(1);
-		return (void (this.renderer && this.renderer.ml()));
+		return (void (this.renderer && this.renderer.redrawTransientElements()));
 	    }
             var i = this.Rr(this.cursorPos);
             t = i + this.dh(i);
@@ -3602,10 +3684,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
     }
 
-    static th = 28; // what is this?? EBCDIC IFS?, ASCII FS
-    static lh = 30; // Field mark, record separator
     static bh = [0, 0, 5, 1, 0, 0];
-    static fh = [142, 0, 16, 13, 64, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 4, 150, 3, 68, 1, 0, 241, 0, 0, 0, 0, 3, 195, 1, 54, 128, 32, 248, 18, 16, 65, 234, 3, 169, 3, 69];
+   
     static wi = 14;
 
     static Pt = [43, 67, 82];
@@ -3643,7 +3723,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 			let l = ttt % this.size,
                             i = this.getScreenElementByPosition(l),
                             e = i.charToDisplay();
-			if (e === VirtualScreen3270.th) {
+			if (e === Ebcdic.fieldMark) {
                             n = !0;
                             break;
 			}
@@ -3657,7 +3737,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     handleEraseEOF(){ // (lc.prototype.pr = function () {
 	let t, l;
 	if ((this.cacheFieldDataMap(), this.isFormatted)) {
-            if (((l = this.getFieldData3270ByPosition(this.cursorPos, true)), !l || l.attributes.isProtected())) return this.Su(1), void (this.renderer && this.renderer.ml());
+            if (((l = this.getFieldData3270ByPosition(this.cursorPos, true)), !l || l.attributes.isProtected())) return this.Su(1), void (this.renderer && this.renderer.redrawTransientElements());
             {
 		let l = this.Rr(this.cursorPos);
 		t = l + this.dh(l);
@@ -3708,7 +3788,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             let t = this.getFieldData3270ByPositionNoNull(this.cursorPos, true);
 	    let l = t.position;
 	    let e = t.length;
-            if (this.cursorPos === l || t.attributes.isProtected()) return this.Su(1), void (this.renderer && this.renderer.ml());
+            if (this.cursorPos === l || t.attributes.isProtected()) return this.Su(1), void (this.renderer && this.renderer.redrawTransientElements());
             (n = 64 !== s && 0 !== s ? this.cursorPos : this.cursorPos + 1), (i = l + e);
 	} else {
 	    n = this.cursorPos;
@@ -3786,7 +3866,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             } else {
 		this.Su(1);
 		if (this.renderer){
-		    this.renderer.ml();
+		    this.renderer.redrawTransientElements();
 		}
 	    }
 	} else {
@@ -3825,7 +3905,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     // called from handleFunction("FieldMark","Dup","Null")
     handleEnterSpecialCharacter(ch:number){ //   (lc.prototype.Er = function (t) {
-	this.enterCharacterAtCursor(ch) && ch === VirtualScreen3270.th && this.doTab();
+	this.enterCharacterAtCursor(ch) && ch === Ebcdic.fieldMark && this.doTab();
 	if (this.renderer){
 	    this.renderer.fullPaint();
 	}
@@ -3837,7 +3917,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	if (1 === this.Cu){
 	    this.Cu = null;
 	    if (this.renderer){
-		this.renderer.ml();
+		this.renderer.redrawTransientElements();
 	    }
 	}
     }
@@ -3873,29 +3953,29 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     handleNewLine(){ // (lc.prototype.cr = function () {
 	this.cacheFieldDataMap();
 	var t = Math.floor(this.cursorPos / this.width);
-	if (!this.isFormatted) return this.setCursorPos((t + 1) * this.width), void (this.renderer && this.renderer.ml());
+	if (!this.isFormatted) return this.setCursorPos((t + 1) * this.width), void (this.renderer && this.renderer.redrawTransientElements());
 	var l = ((t + 1) * this.width) % this.size,
             n = this.getFieldData3270ByPosition(l, true);
 	if (n && n.isEditable()) n.position == l ? this.setCursorPos(l + 1) : this.setCursorPos(l);
 	else {
-            var i = this.yr(l, !1);
+            var i = this.findMatchingEditableField(l, !1);
             i && this.setCursorPos(i + 1);
 	}
-	this.renderer && this.renderer.ml();
+	this.renderer && this.renderer.redrawTransientElements();
     }
     
     Tu():void{ // (lc.prototype.Tu = function () {
-	var t = this.yr(this.cursorPos, !1);
+	var t = this.findMatchingEditableField(this.cursorPos, !1);
 	if (null != t) {
 	    Utils.protocolLogger.debug("Got editable field at " + t);
 	    this.setCursorPos(t + 1);
 	    if (this.renderer) {
-		this.renderer.ml();
+		this.renderer.redrawTransientElements();
 	    }
 	} else {
 	    this.setCursorPos(this.getFieldData3270ByPositionNoNull(this.cursorPos, !0).position + 1);
 	    if (this.renderer){
-		this.renderer.ml();
+		this.renderer.redrawTransientElements();
 	    }
 	}
     }
@@ -3906,9 +3986,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    const l = t.position;
             if (l === this.cursorPos && t.isEditable()) {
 		let t = (l + 1) % this.size;
-		return this.setCursorPos(t), void (this.renderer && this.renderer.ml());
+		return this.setCursorPos(t), void (this.renderer && this.renderer.redrawTransientElements());
             }
-            const n = this.yr(this.cursorPos, !1);
+            const n = this.findMatchingEditableField(this.cursorPos, !1);
             if (null != n) {
 		Utils.protocolLogger.debug("Got editable field at " + n);
 		this.setCursorPos(n + 1);
@@ -3918,7 +3998,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	} else {
 	    this.setCursorPos(0);
 	}
-	this.renderer && this.renderer.ml();
+	this.renderer && this.renderer.redrawTransientElements();
     }
     
     Cr(){ // (lc.prototype.Cr = function () {
@@ -3943,7 +4023,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	let element = this.screenElements[this.cursorPos];
 	const t = element && element.field;
 	if (!t || this.cursorPos <= t.start || !t.fieldData.isEditable()) {
-            let t = this.yr(this.cursorPos, !0);
+            let t = this.findMatchingEditableField(this.cursorPos, !0);
             if (t) {
 		const element2 = this.screenElements[t];
 		const l = element2 && element2.field;
@@ -3958,37 +4038,37 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     handleHome(){//(lc.prototype.ar = function () {
 	this.cacheFieldDataMap();
-	if (!this.isFormatted) return this.setCursorPos(0), void (this.renderer && this.renderer.ml());
-	var t = this.yr(this.size - 2, !1);
-	null != t && (this.setCursorPos(t + 1), this.renderer && this.renderer.ml());
+	if (!this.isFormatted) return this.setCursorPos(0), void (this.renderer && this.renderer.redrawTransientElements());
+	var t = this.findMatchingEditableField(this.size - 2, !1);
+	null != t && (this.setCursorPos(t + 1), this.renderer && this.renderer.redrawTransientElements());
     }
 
     handleBackTab(){ // (lc.prototype.dr = function () {
 	this.cacheFieldDataMap();
-	if (!this.isFormatted) return this.setCursorPos(0), void (this.renderer && this.renderer.ml());
+	if (!this.isFormatted) return this.setCursorPos(0), void (this.renderer && this.renderer.redrawTransientElements());
 	var t = this.screenElements[this.cursorPos];
 	if (t && t.field && t.field.fieldData.isEditable()) { // JOE: added null check on element t
             var l = this.Rr(this.cursorPos) + 1;
-            if (this.cursorPos != l && this.cursorPos + 1 != l) return this.setCursorPos(l), void (this.renderer && this.renderer.ml());
+            if (this.cursorPos != l && this.cursorPos + 1 != l) return this.setCursorPos(l), void (this.renderer && this.renderer.redrawTransientElements());
 	}
-	var n = this.yr(this.cursorPos, !0);
-	null != n && n != this.size - 1 && (this.setCursorPos(n + 1), this.renderer && this.renderer.ml());
+	var n = this.findMatchingEditableField(this.cursorPos, !0);
+	null != n && n != this.size - 1 && (this.setCursorPos(n + 1), this.renderer && this.renderer.redrawTransientElements());
     }
     
     handleEnd(){ // (lc.prototype.or = function () {
 	this.cacheFieldDataMap();
-	if (!this.isFormatted) return this.setCursorPos(this.size - 1), void (this.renderer && this.renderer.ml());
+	if (!this.isFormatted) return this.setCursorPos(this.size - 1), void (this.renderer && this.renderer.redrawTransientElements());
 	let t:any;
         let l:number|null = this.cursorPos;
         let n = this.getFieldData3270ByPosition(this.cursorPos, true);
 	if (!n || !n.isEditable()) {
-            if (null == (l = this.yr(this.cursorPos, !1))) return;
+            if (null == (l = this.findMatchingEditableField(this.cursorPos, !1))) return;
             n = this.getFieldData3270ByPosition(l, true);
 	}
 	if (n) {
             for (var i, e = (n.position + n.length) % this.size, s = 1; s < n.length; s++)
-		if (((i = e - s < 0 ? this.size + (e - s) : e - s), (t = this.screenElements[i]) && (t.charToDisplay()) > 64)) return this.setCursorPos(1 == s ? i : i + 1), void (this.renderer && this.renderer.ml());
-            this.setCursorPos(n.position + 1), this.renderer && this.renderer.ml();
+		if (((i = e - s < 0 ? this.size + (e - s) : e - s), (t = this.screenElements[i]) && (t.charToDisplay()) > 64)) return this.setCursorPos(1 == s ? i : i + 1), void (this.renderer && this.renderer.redrawTransientElements());
+            this.setCursorPos(n.position + 1), this.renderer && this.renderer.redrawTransientElements();
 	}
     }
 
@@ -4011,9 +4091,9 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     // I think t should always be a number, but... I have no proof yet
-    ur(t:any):void{ // (lc.prototype.ur = function (t) {
+    ur(t:number):void{ // (lc.prototype.ur = function (t) {
 	if (this.convoType === VirtualScreen3270.convoTypes.NVT){
-	    this.eh();
+	    this.nvtSendScreen(); // eh()
 	    this.handleNVTData1([13, 10]);
 	} else {
 	    this.Me = false;
@@ -4025,7 +4105,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 
     // t is a full JSON message thingy
     // l is a QReply
-    fr(t:any,l:QReply ):void{ // (lc.prototype.Fr = function (t, l) {
+    // and it's *NOT* called
+    Fr(t:any,l:QReply ):void{ // (lc.prototype.Fr = function (t, l) {
 	let logger = Utils.messageLogger;
 	if (l){
 	    logger.debug("Sending message with data to b64:");
@@ -4139,7 +4220,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                     }
                 }
                 let l = tt.charToDisplay();
-                l ? (l < 64 && l !== VirtualScreen3270.th && l !== VirtualScreen3270.lh && (l = 64), tt.isGraphic && n.push(8), n.push(l)) : n.push(0);
+                l ? (l < 64 && l !== Ebcdic.fieldMark && l !== Ebcdic.recordMark && (l = 64), tt.isGraphic && n.push(8), n.push(l)) : n.push(0);
             }
         }
 	}
@@ -4253,7 +4334,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 			var o, c, f, d = r, w = new Array(h.length - 1);
 			for (var p = 0; p < h.length - 1; p++)
                             (o = (d + p) % this.size),
-			(c = this.screenElements[o]) && (f = c.charToDisplay()) && (f < 64 && f !== VirtualScreen3270.th && f !== VirtualScreen3270.lh && (f = 64),
+			(c = this.screenElements[o]) && (f = c.charToDisplay()) && (f < 64 && f !== Ebcdic.fieldMark && f !== Ebcdic.recordMark && (f = 64),
 										    (w[v++] = { char: f, fn: c.isGraphic }));
 			for (p = 0; p < v; p++) 1 == w[p].fn && (logger.debug("Pushed graphics escape for char=" + w[p].char),
 								 a.push(8)), a.push(w[p].char);
@@ -4283,38 +4364,51 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     // matches a string against what's on the screen as a subfunction of _r()
-    Br(t:any, // but really a number array
-       n:number){ // (lc.prototype.Br = function (t, n) {
-	for (var i = t.length, e = 0; e < i; e++) {
-            var s = t[e],
-		u = this.screenElements[n + e];
-            if (!u || u.ebcdicChar != s) return Utils.coreLogger.debug("Could not find text"), !1;
+    // no translation, just raw EBCDIC char matching
+    matchEbcdic(ebcdicChars:number[],
+		n:number){ // (lc.prototype.Br = function (t, n) {
+	for (var i = ebcdicChars.length, e = 0; e < i; e++) {
+            var s = ebcdicChars[e],
+	    u = this.screenElements[n + e];
+            if (!u || u.ebcdicChar != s) {
+		Utils.coreLogger.debug("Could not find text");
+		return false;
+	    }
 	}
-	return Utils.coreLogger.debug("found text"), !0;
+	Utils.coreLogger.debug("found text");
+	return true;
     }
 
     // matches a string against what's on the screen
-    _r(t:any, // but really a number array with one broken call in uses
-       n:number,
-       i:number,
-       e:number):number{ // (lc.prototype._r = function (t, n, i, e) {
+    findFirstEbcdicMatchOnRow(ebcdicCharArray:number[], // but really a number array with one broken call in uses
+       startColumn:number,
+       endColumn:number,
+       row:number):number{ // (lc.prototype._r = function (t, n, i, e) {
 	let s;
-        let u = t.length;
-        let h = -1 == i ? this.width - u : i;
-        let r:number = this.width * e;
-	for (s = n; s <= h; s++) if (this.Br(t, (r + s) % this.size)) return Utils.coreLogger.debug("context matchPos=" + (r + s)), r + s;
+        let u = ebcdicCharArray.length;
+        let h = -1 == endColumn ? this.width - u : endColumn;
+        let r:number = this.width * row;
+	for (s = startColumn; s <= h; s++)
+	    if (this.matchEbcdic(ebcdicCharArray, (r + s) % this.size)){
+		Utils.coreLogger.debug("context matchPos=" + (r + s));
+		return  r + s;
+	    }
 	return -1;
     }
-    
-    Wr(t:number,l:number,n:number){ // (lc.prototype.Wr = function (t, l, n) {
-	var i,
-            e = this.width * t,
-            s = [];
-	for (i = 0; i < n; i++) {
-            var u = this.screenElements[e + l + i];
-            s.push(u ? Renderer3270.ebcdic1047ToUnicode[u.ebcdicChar] : 32);
+
+    // returns a normal Javascript unicode string
+    // warning, this does NOT handle alternate charsets at all!!!
+    // fills missing elements as normal blank (unicode == 0x20)
+    getRowCharsAsString(rowNumber:number,
+			startColumn:number,
+			length:number):string{ // (lc.prototype.Wr = function (t, l, n) {
+        let e = this.width * rowNumber;
+        let charArray = [];
+	for (let i:number = 0; i < length; i++) {
+            var u = this.screenElements[e + startColumn + i];
+            charArray.push(u ? Renderer3270.ebcdic1047ToUnicode[u.ebcdicChar] : 0x20);
 	}
-	return String.fromCharCode.apply(null, s).trim();
+	return String.fromCharCode.apply(null, charArray).trim();
     }
     
     Qr(t:number, n:number, i:number, e:number):string{ // (lc.prototype.Qr = function (t, n, i, e) {
@@ -4322,33 +4416,35 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
         u = "";
 	for (s = t; s <= n; s++) {
             let h:number = e - i + 1;
-            Utils.coreLogger.debug("colWidth=" + h), (u += this.Wr(s, i, h)), (u += " ");
+            Utils.coreLogger.debug("colWidth=" + h), (u += this.getRowCharsAsString(s, i, h)), (u += " ");
 	}
 	return u.trim();
     }
 
-    Gr(t:number,
+    // returns first matching row number or -1
+    findMatchingRow(firstLine:number, // 0 based or 1 based??
        l:boolean,
-       n:boolean,
-       i:number,
-       e:number,
-       s:number,
-       u:number,
-       h:number[]):number { // (lc.prototype.Gr = function (t, l, n, i, e, s, u, h) {
-	var r = 0;
-	for (r = t; l ? r >= 0 : r < this.height; l ? r-- : r++) {
-            var a = this.getScreenElementRowColumn(r, i),
-		o = this.getScreenElementRowColumn(r, s);
+       n:boolean,  // is not used??
+       startColumn:number,
+       startColumnChar:number,
+       endColumn:number,
+       endColumnChar:number,
+       allowableMiddleChars:number[]):number { // (lc.prototype.Gr = function (t, l, n, i, e, s, u, h) {
+	// iterate over lines
+	for (let r:number = firstLine; l ? r >= 0 : r < this.height; l ? r-- : r++) {
+            let a:ScreenElement|null = this.getScreenElementRowColumn(r, startColumn);
+	    let o:ScreenElement|null  = this.getScreenElementRowColumn(r, endColumn);
             if (a && o) {
-		if (!a.match(e, true) || !o.match(u, true)) continue;
-		for (var c = !0, f = i + 1; f < s; f++) {
+		if (!a.match(startColumnChar, true) || !o.match(endColumnChar, true)) continue;
+		let everythingMatches = true;
+		for (let f = startColumn + 1; f < endColumn; f++) {
                     var d = this.getScreenElementRowColumn(r, f);
-                    if (!d || !d.matchAnyOf(h, true)) {
-			c = !1;
+                    if (!d || !d.matchAnyOf(allowableMiddleChars, true)) {
+			everythingMatches = !1;
 			break;
                     }
 		}
-		if (c) return r;
+		if (everythingMatches) return r;
             }
 	}
 	return -1;
@@ -4377,7 +4473,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     dh(t:number):number|null{ // (lc.prototype.dh = function (t) {
-	let l:number|null = this.Gu(t, false, false, false);
+	let l:number|null = this.findMatchingFieldNearPosition(t, false, false, false);
         return null != l ? (l < t ? this.size - t : l - t) : null;
     }
 
@@ -4397,111 +4493,134 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     Kr(position:number, isEditable:boolean, n:boolean):number|null{ // (lc.prototype.Kr = function (t, l, n) {
-	return this.Gu(position, !0, isEditable, n);
+	return this.findMatchingFieldNearPosition(position, !0, isEditable, n);
     }
 
-    // this gets a field that matches *something */
-    Gu(position:number,
-       l:boolean,
-       isEditable:boolean,
-       i:boolean):number|null{ //(lc.prototype.Gu = function (t, l, n, i) {
-	var e;
+    /* This gets a field that matches backwards/forwards, with editibility switch
+       'thingy' arg is not understood yet.
+       It is the basis for tabbing forwards and backwards throughout the input handling.
+       Returns position of the field character that defines the field
+ */
+    findMatchingFieldNearPosition(position:number,
+				  searchBackwards:boolean,
+				  isEditable:boolean,
+				  thingy:boolean):number|null{ //(lc.prototype.Gu = function (t, l, n, i) {
 	this.cacheFieldDataMap();
-	let s:number = -1;
+	let fieldPosition:number = -1;
         let fieldData = this.getFieldData3270ByPosition(position, !0);
 	if (fieldData){
-	    s = fieldData.position;
+	    fieldPosition = fieldData.position;
 	    Utils.protocolLogger.debug("original element field data=" + fieldData.toString());
 	}
-	let h:any[] = Object.keys(this.fieldDataMap);
+	let fieldMapKeys:any[] = Object.keys(this.fieldDataMap);
         let r = 0; // the key to the one we want
-	for (e = 0; e < h.length; e++)
-            if (h[e] == s) {
+	let e:number = 0;
+	for (; e < fieldMapKeys.length; e++)
+            if (fieldMapKeys[e] == fieldPosition) {
 		r = e;
 		break;
             }
-	let a:number = new Boolean(l).valueOf() ? -1 : 1;
-	for (var o:number = r + a; ; ) {
-            if ((o = (o < 0 ? h.length + o : o % h.length)) == e) return null;
-            var c = h[o];
-            if (!this.Hr(s, (this.screenElements[c] as ScreenElement), isEditable) && // JOE used to sloppily compared == 0
+	let loopDelta:number = new Boolean(searchBackwards).valueOf() ? -1 : 1;
+	for (var o:number = r + loopDelta; ; ) {
+            if ((o = (o < 0 ? fieldMapKeys.length + o : o % fieldMapKeys.length)) == e) return null;
+            var c = fieldMapKeys[o];
+            if (!this.isMatchingField(fieldPosition, (this.screenElements[c] as ScreenElement), isEditable) && // JOE used to sloppily compared == 0
 		(!isEditable || this.fieldDataMap[c].isEditable())) {
 		var f = Number(c),
                     d = (f + 1) % this.size,
                     w = this.fieldDataMap[d];
-		if (!i || !w) return f;
+		if (!thingy || !w) return f;
             }
-            o += a;
+            o += loopDelta;
 	}
 	// The above for loop is really while(true), because test is empty
     }
-    
-    yr(t:number,l:boolean){ // (lc.prototype.yr = function (t, l) {
-	return this.Gu(t, l, !0, !0);
+
+    /* returns position of the field character that defines the field */
+    findMatchingEditableField(position:number,searchBackwards:boolean){ // (lc.prototype.yr = function (t, l) {
+	return this.findMatchingFieldNearPosition(position, searchBackwards, true, true);
     }
     
-    Hr(position:number,element:ScreenElement,isEditable:boolean):boolean{ // (lc.prototype.Hr = function (t, l, n) {
+    isMatchingField(position:number,
+       element:ScreenElement,
+       requireEditableField:boolean):boolean{ // (lc.prototype.Hr = function (t, l, n) {
 	if (element.field) {
             var field = element.field;
-            if (!isEditable || field.fieldData.isEditable()) return field.fieldData.position == position;
+            if (!requireEditableField || field.fieldData.isEditable()){
+		return field.fieldData.position === position;
+	    }
 	}
 	return false;
     }
     
-    Yr(t:number,l:number,n:number){ // (lc.prototype.Yr = function (t, l, n) {
-	return this.Gr(t, true, true, l, 197, n, 213, [162]);
+    findBoxTopRow(t:number,startColumn:number,endColumn:number){ // (lc.prototype.Yr = function (t, l, n) {
+	return this.findMatchingRow(t, true, true,
+				    startColumn, Ebcdic.boxTopLCorner,
+				    endColumn, Ebcdic.boxTopRCorner,
+				    [ Ebcdic.boxHLine] );
     }
     
-    qr(t:number,l:number,n:number){ // (lc.prototype.qr = function (t, l, n) {
-	return this.Gr(t, false, true, l, 196, n, 212, [162, 199]);
+    findBoxBottomRow(t:number,startColumn:number,endColumn:number){ // (lc.prototype.qr = function (t, l, n) {
+	return this.findMatchingRow(t, false, true,
+				    startColumn, 196,
+				    endColumn, 212,
+				    [ Ebcdic.boxHLine, Ebcdic.boxTUp ]);
     }
     
-    Jr(t:number, n:number, i:number){ // (lc.prototype.Jr = function (t, n, i) {
+    findBoxDividerRow(t:number, startColumn:number, endColumn:number){ // (lc.prototype.Jr = function (t, n, i) {
 	Utils.coreLogger.debug("find box divider from " + t);
-	return  this.Gr(t, !1, !0, n, 198, i, 214, [162, 199, 204, 211, 215]);
+	let middleChars = [ Ebcdic.boxHLine, 0xC7, 0xCC, Ebcdic.boxCrossedLines, 0xD7];
+	return this.findMatchingRow(t, false, true,
+				    startColumn, Ebcdic.boxTRight,
+				    endColumn, Ebcdic.boxTLeft,
+				    middleChars);
     }
 
-    static ebcdicFile = [0xC6, 0x89, 0x93, 0x85]; // global zo
-    static ebcdicCommand = [0xC3, 0x96, 0x94, 0x94, 0x81, 0x85, 0x84]; // global Ko
-    static ebcdicMXI = [0xD4, 0xE7, 0xC9 ]; // global Ho
+    
+    static ebcdicFile = [0xC6, 0x89, 0x93, 0x85]; // global zo - the word "File" in EBCDIC
+    static ebcdicCommand = [0xC3, 0x96, 0x94, 0x94, 0x81, 0x85, 0x84]; // global Ko: "Command"
+    static ebcdicMXI = [0xD4, 0xE7, 0xC9 ]; // global Ho: "MXI"
 
     // this seems fishy, like old demo code
-    Zr(){ // (lc.prototype.Zr = function (t) { // parm was never used or passed in
+    getDemoScreenContext(){ // (lc.prototype.Zr = function (t) { // parm was never used or passed in
 	if (!this.isFieldDataMapCached || !this.Vu) { // JOE: changed from ==0 to ! because falsey tests are cranky in TS
             this.cacheFieldDataMap();
             var n:any = { application: "unknown" };
-            if (((this.Xr = n),
-		 -1 != this._r(VirtualScreen3270.ebcdicFile, 16, 20, 0) &&
-		 -1 != this._r(VirtualScreen3270.ebcdicCommand, 1, 1, 2)))
-		(n.application = "e3270"),
-	    (n.screenID = this.Wr(3, 1, 8));
-            else if (-1 != this._r(VirtualScreen3270.ebcdicFile, 3, 3, 0) &&
-		     -1 != this._r(VirtualScreen3270.ebcdicMXI, 1, 1, 2)) {
-		(n.application = "MXI"), Utils.coreLogger.debug("likely MXI, further investigation coming");
-		var i = this._r("-", 6, 20, 2);
-                    -1 != i && (n.screenID = this.Wr(2, 6, i - 6));
-            } else n.screenID = this.Wr(2, 1, 8);
+	    this.latestDemoScreenContext = n;
+            if ((
+		-1 != this.findFirstEbcdicMatchOnRow(VirtualScreen3270.ebcdicFile, 16, 20, 0) &&
+		-1 != this.findFirstEbcdicMatchOnRow(VirtualScreen3270.ebcdicCommand, 1, 1, 2))){
+		n.application = "e3270";
+		n.screenID = this.getRowCharsAsString(3, 1, 8);
+	    } else if (-1 != this.findFirstEbcdicMatchOnRow(VirtualScreen3270.ebcdicFile, 3, 3, 0) &&
+		     -1 != this.findFirstEbcdicMatchOnRow(VirtualScreen3270.ebcdicMXI, 1, 1, 2)) {
+		n.application = "MXI";
+		Utils.coreLogger.debug("likely MXI, further investigation coming");
+		var i = this.findFirstEbcdicMatchOnRow([ Ebcdic.hyphen ], 6, 20, 2);
+                    -1 != i && (n.screenID = this.getRowCharsAsString(2, 6, i - 6));
+            } else n.screenID = this.getRowCharsAsString(2, 1, 8);
             this.Vu = !0;
 	}
-	return this.Xr;
+	return this.latestDemoScreenContext;
     }
 
     // looks like more demo code
-    $r(t:any,
+    // E3270 is an IBM 3270 screen formatter used in the OMEGAMON product family
+    getE3270ScreenContextInfo(t:any,
        n:any, // bound, not used
        i:number,
        e:number){ // (lc.prototype.$r = function (t, n, i, e) {
 	let logger = Utils.coreLogger;
-	var s = this.Yr(i, 1, this.width - 2);
+	var s = this.findBoxTopRow(i, 1, this.width - 2);
 	if ((logger.debug("box top = " + s), -1 != s)) {
-            var u = this.qr(i, 1, this.width - 2);
+            var u = this.findBoxBottomRow(i, 1, this.width - 2);
             if ((logger.debug("boxBottom = " + u), -1 != u)) {
 		logger.debug("should identify e3270 table and column");
-            var h = this.Wr(s + 1, 5, 120).trim();
+            var h = this.getRowCharsAsString(s + 1, 5, 120).trim();
 		t.tableName = h;
-		var r = this.Jr(s + 1, 1, this.width - 2),
-                    a = -1 == r ? -1 : this.Jr(r + 1, 1, this.width - 2),
-                    o = -1 == a ? -1 : this.Jr(a + 1, 1, this.width - 2);
+		var r = this.findBoxDividerRow(s + 1, 1, this.width - 2),
+                    a = -1 == r ? -1 : this.findBoxDividerRow(r + 1, 1, this.width - 2),
+                    o = -1 == a ? -1 : this.findBoxDividerRow(a + 1, 1, this.width - 2);
 		logger.debug("titleDivider=" + r + " colTitleTop=" + a + " colBottom=" + o);
 		var c:any[] = [];
 		t.columnInfos = c;
@@ -4528,7 +4647,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                             n = this.screenElements[l];
 			if (!n || !n.isGraphic|| 162 != n.ebcdicChar) {
                             var A = w - 2;
-                            t.rowIds.push(this.Wr(f, 2, A)), i == f && (t.currentRowIndex = p), p++;
+                            t.rowIds.push(this.getRowCharsAsString(f, 2, A)), i == f && (t.currentRowIndex = p), p++;
 			}
                     }
                     t.rowCount = p;
@@ -4536,41 +4655,53 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             }
 	}
     }
-    
-    ta(t:any,
-       l:any, // bound  but not used in body
-       n:number,
-       i:number){ // (lc.prototype.ta = function (t, l, n, i) {
+
+    // looks like more demo code
+    // E3270 is an IBM 3270 screen formatter used in the OMEGAMON product family
+    getMXIScreenContextInfo(context:any,
+			    screenPos:number, // not used inbody
+			    n:number,
+			    i:number){ // (lc.prototype.ta = function (t, l, n, i) {
 	let e;
         let s:any[] = [];
-	t.columnInfos = s;
+	context.columnInfos = s;
 	var u = 0,
             h = 6 * this.width,
-            r = this.Wr(2, 6, 15),
+            r = this.getRowCharsAsString(2, 6, 15),
             a = r.indexOf("-");
-	for (-1 != a && (r = r.substring(0, a)), t.tableName = r, e = 1; e < this.width; e++) {
+        /* There's some fiddling about to find columns in an MXI screen that I don't fully grok,
+	   but is almost surely not important.
+	*/
+	for (-1 != a && (r = r.substring(0, a)), context.tableName = r, e = 1; e < this.width; e++) {
             var o = this.screenElements[h + e];
             if (o && o.fieldData) {
 		var c:any = { index: s.length };
                 var f = e - u - 1;
-		c.name = this.Wr(5, u + 1, f);
+		c.name = this.getRowCharsAsString(5, u + 1, f);
 		if (i > u && i < e){
-		    t.currentColumnIndex = s.length;
+		    context.currentColumnIndex = s.length;
 		}
 		s.push(c);
 		u = e;
             }
 	}
-	n > 5 && n < this.height - 2 && (t.currentRowIndex = n - 5);
+	n > 5 && n < this.height - 2 && (context.currentRowIndex = n - 5);
     }
 
     // more demo code?
-    Eu(t:number){ // (lc.prototype.Eu = function (t) {
-	var n = Math.floor(t / this.width),
-            i = Math.floor(t % this.width);
+    getDemoScreenContextPlus(screenPos:number){ // (lc.prototype.Eu = function (t) {
+	var row = Math.floor(screenPos / this.width),
+            column = Math.floor(screenPos % this.width);
 	Utils.coreLogger.debug("before getScreenContext()");
-	var e = this.Zr();
-	return e && ("e3270" == e.application ? this.$r(e, t, n, i) : "MXI" == e.application && this.ta(e, t, n, i)), e;
+	let context = this.getDemoScreenContext();
+	if (context){
+	    if ("e3270" == context.application) {
+		this.getE3270ScreenContextInfo(context, screenPos, row, column);
+	    } else if ("MXI" == context.application){
+		this.getMXIScreenContextInfo(context, screenPos, row, column);
+	    }
+	}
+	return context;
     }
     
     Ui(customizations:any){ // (lc.prototype.Ui = function (t) {
@@ -4579,18 +4710,23 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
     }
     
-    handleContextMenu(t:MouseEvent){ // (lc.prototype.Ae = function (t) {
+    handleContextMenu(event:MouseEvent){ // (lc.prototype.Ae = function (t) {
 	let logger = Utils.coreLogger;
-	t.preventDefault();
-	var n = t.offsetX,
-            i = t.offsetY;
-	if ((logger.debug("contextMenu handler x=" + n + ", y=" + i), this.renderer)) {
-            var e = this.renderer.gl(n, i);
-            if ((logger.debug("row,col = "+e), null != e)) {
-		var s = e.rows * this.width + e.columns;
-		logger.debug("screenElt at " + s + " = " + this.screenElements[s]);
-		var u = this.Eu(s);
-		logger.debug("contextMenu screenContext="+u), this.callbacks && this.callbacks.contextCallback && this.callbacks.contextCallback(t, u);
+	event.preventDefault();
+	var eventX = event.offsetX,
+            eventY = event.offsetY;
+	logger.debug("contextMenu handler x=" + eventX + ", y=" + eventY);
+	if (this.renderer) {
+            let rowAndColumn = this.renderer.getRowAndColumnFromEventXY(eventX, eventY);
+	    logger.debug("row,col = "+rowAndColumn);
+            if ( rowAndColumn != null){
+		var logicalScreenPos = rowAndColumn.rows * this.width + rowAndColumn.columns;
+		logger.debug("screenElt at " + logicalScreenPos + " = " + this.screenElements[logicalScreenPos]);
+		var context = this.getDemoScreenContextPlus(logicalScreenPos);
+		logger.debug("contextMenu screenContext="+context);
+		if (this.callbacks && this.callbacks.contextCallback){
+		    this.callbacks.contextCallback(event, context);
+		}
             }
 	}
     }
@@ -4621,7 +4757,12 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	console.log("NVT data (case 2) is currently stubbed out");
     }
 
-    eh(){ // (lc.prototype.eh = function () {
+    /* There's some crazy stuff going on in here.  
+       eh() is the only caller of uh()
+       uh calls something called Gl() in a renderer.
+       Gl adds a string (!) to an array to send back to server, not a number
+     */
+    nvtSendScreen(){ // (lc.prototype.eh = function () {
 	let t = this.iu,
             l = [];
 	t > this.screenElements.length && (t -= this.screenElements.length);
@@ -4641,7 +4782,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	if (this.parser){ // probably true in any usage
 	    l.push(13, 37);
 	    this.parser.sh && l.push(255, 249);
-	    this.uh(l); // sends the bytes
+	    this.nvtSendBytes(l);
 	    this.parser.Bu = true;
 	}
     }
@@ -4821,11 +4962,52 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
         return reply;
     }
     
-    buildCharacterSetReply():Uint8Array{ // (lc.prototype.Ch = function () {
-	var t,
-            l = VirtualScreen3270.fh.length,
+    static fh = [142, 0, 16, 13,
+		 64, 0, 0, 0,
+		 11,
+		 0,    0,   0,  0,  0, 0,    0, 4, 150, 3, 68,   // CGCSGID 01174-00836
+		 1,    0, 241,  0,  0, 0,    0, 3, 195, 1, 54,   // CGCSGID 00963-00310
+		 128, 32, 248, 18, 16, 65, 234, 3, 169, 3, 69];  // CGCSGID 00937-00837
+
+    /*
+      0-1  Length
+      2    0x81
+      3    0x85
+      4    Flags  8E Escape, Load PSSF No!!,  2-byte yes CGCSGID
+      5    Flags  0  because not aware of this
+      6    16 bits char slot width
+      7    13 height
+      8-11 bits for PS format types
+      12   length of each slot
+
+      each char set (1-based)
+      1    PS store ID
+      2    Flags 32 is DBCS
+      3  
+      8-11 CGCSGI see notes in CharsetInfo
+    */
+
+    /*
+      This entire method is craven and misguided.   If the terminal supports
+      dynamic changing of charsets, then it should do as such.   But instead
+      it tweaks a template of a packet capture of some other program's Charsets
+      QReply and slaps (C)GCSGID ID's into two 4-byte zones. 
+     */
+    
+    buildDBCSCharacterSetReply():Uint8Array{ // (lc.prototype.Ch = function () {
+	let charsetID1 = this.charsetInfo.bt;
+	let charsetID2 = this.charsetInfo.gt;
+	if (!charsetID1 || !charsetID2){
+	    throw "Illegal State: must have charset ID's for DBCS charset reply";
+	}
+	var l = VirtualScreen3270.fh.length,
             n = new Uint8Array(l);
-	for (t = 0; t < l; t++) n[t] = t > 16 && t <= 20 ? this.charsetInfo.bt[t - 16] : t > 38 && t <= 42 ? this.charsetInfo.gt[t - 38] : VirtualScreen3270.fh[t];
+	for (let t:number = 0; t < l; t++)
+	    n[t] = ((t > 16 && t <= 20) ?
+	        charsetID1[t - 16] :
+		((t > 38 && t <= 42) ?
+		    charsetID2[t - 38] :
+		    VirtualScreen3270.fh[t]));
 	Utils.protocolLogger.debug("replying to DBCS charsets, reply len=0x" + Utils.hexString(l));
 	return n;
     }
@@ -4905,7 +5087,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    qReply.addCodeReply(QReply.CODE_AUXILIARY_DEVICE, QReply.standardAuxDeviceReply);
 	    logger.debug("queryReply charset=" + this.charsetInfo.name + " font " + this.charsetInfo.font);
             if (this.charsetInfo.isDBCS) {
-		var c = this.buildCharacterSetReply();
+		var c = this.buildDBCSCharacterSetReply();
 		qReply.addU8CodeReply(QReply.CODE_CHARACTER_SETS, c);
 		qReply.addCodeReply(QReply.CODE_DBCS_ASIA, QReply.standardDBCSAsiaReply);
             } else {
@@ -4945,7 +5127,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                     break;
 		case QReply.CODE_CHARACTER_SETS:
                     if (this.charsetInfo.isDBCS){
-			c = this.buildCharacterSetReply();
+			c = this.buildDBCSCharacterSetReply();
 			qReply.addU8CodeReply(QReply.CODE_CHARACTER_SETS , c);
 			w++;
 			qReply.addCodeReply(QReply.CODE_DBCS_ASIA, QReply.standardDBCSAsiaReply);
@@ -5153,7 +5335,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
     }
     
-    jh(){ // (lc.prototype.jh = function () {
+    handleEraseAllUnprotected(){ // (lc.prototype.jh = function () {
 	let t;
 	this.cacheFieldDataMap();
 	(this.Ls.aid = TN3270EParser.AID_NO_AID), (this.Me = true), (this.Ls._s = 32);
@@ -5275,7 +5457,8 @@ class QReply { // was nc
         <flag2>
         <deviceType> - 8 bytes
         <userAssignedName> - 8 bytes
-        ....
+        SDP for DOID follows usually
+	
        */
     static CODE_FORMAT_PRESENTATION        = 0x90;
     static CODE_DBCS_ASIA                  = 0x91;
@@ -5299,8 +5482,18 @@ class QReply { // was nc
 	Graphics System Principles of Operation 
 
 	http://bitsavers.org/pdf/ibm/5080/GA23-0134-0_IBM_5080_Graphics_Systems_Principles_of_Operation_Mar1984.pdf
+
+	https://www.ibm.com/docs/en/personal-communications/5.9?topic=programming-query-reply-data-structures-supported-by-ehllapi
+
+	FLAGS
+	REFID  0x01 is a 5080 0x02 is a WHIP API (IBM RT PC Workstation Host Interface Program Version 1.1 User's Guide and Reference Manual)
+	SSID  subset
+
+	Destination Origin SDPID
+
+        The variant Graphic orders are in Chapter 5 above
     */
-    static CODE_ANOMALY_IMPLEMENTATION     = 0x9D;
+    static CODE_ANOMALY_IMPLEMENTATION     = 0x9D; // (what does this mean, what anomaly)
     static CODE_IBM_AUXILIARY_DEVICE       = 0x9E;
     static CODE_BEGIN_END_OF_FILE          = 0x9F;
     static CODE_DEVICE_CHARACTERISTICS     = 0xA0;
@@ -5311,7 +5504,10 @@ class QReply { // was nc
     static CODE_TRANSPARENCY               = 0xA8;
     static CODE_SETTABLE_PRINTER_CHARACTERISTICS  = 0xA9;
     static CODE_IOCA_AUXILIARY_DEVICE             = 0xAA;
-    static CODE_COOPERATIVE_PROCESSING_REQUESTOR  = 0xAB;
+    static CODE_COOPERATIVE_PROCESSING_REQUESTOR  = 0xAB; /* This was a crazy feature for APL to work between
+							     Host and Workstation in some way
+							     https://www.semanticscholar.org/paper/An-experimental-facility-for-cooperative-processing-Kaneko/b68ec5b9941e4ab4e472e119837312ddbdc6c70a/figure/2
+							     */
     /*
       See PCOMM doc ref'ed above
      */
@@ -5362,6 +5558,7 @@ class QReply { // was nc
     static standardGraphicSymbolReply = [0, 0, 9, 12, 0, 0, 0, 16, 1, 0, 0, 240, 2, 2, 0, 0, 0, 0, 0, 2, 185, 0, 37]; // was ch
     static standardDBCSAsiaReply = [0, 3, 1, 128, 3, 2, 1]; // was dh
     static standardDDMReply = [0, 0, 8, 0, 8, 0, 1, 1]; // was wh
+                              // DDM: FLAGS 0000 LIMIN 0800 LIMOUT 0800 NSS 1 DDMSS 1
     static standardValidationReply = [7]; // was vh
     static standardAlphanumericPartitionsReply = [0, 30, 240, 0]; // was ph
     static standardCodePortReply1 = [0, 3, 2, 144, 9, 1, 0, 3, 2, 128, 0, 127, 255]; // was Ih
@@ -5444,7 +5641,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
 	// this.canvas is this.Rt
 	// this.selectionCanvas = this.Il = null;
 	// undelared:
-	this.St;  // set from charsetInfo.st (screen.It.St) during setCharsetInfo
+	// this.St;  // set from charsetInfo.st (screen.It.St) during setCharsetInfo
     }
 
     static makeRGBColor(r:number,g:number,b:number):number{
@@ -5489,11 +5686,6 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
     }
 
     static defaultScreenElement = new ScreenElement(0, 0x40, null);
-    static fieldMark = 28; // was th, See EBCDIC docs
-    static recordMark = 30; // was lh
-    static specialMarks = [ 28, 30]; // keep in sync with above definitions
-    static unicodeEuro = 0x20AC; // 8364
-    static unicodeSpace2000 = 0x2000; // 8192
     static ebcdic1047ToUnicode
 	= [
 	    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 
@@ -5599,7 +5791,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
     }
     
     static isSpecialMark(c:number):boolean{
-	return (c == Renderer3270.fieldMark || c == Renderer3270.recordMark);
+	return (c == Ebcdic.fieldMark || c == Ebcdic.recordMark);
     }
 
     // min'ed as (Ya.prototype.on = function (t, l, n, i, e, s, u) {
@@ -5629,8 +5821,8 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
             renderingFlags |= 1;
 	    unicodeArray[charIndex] = Renderer3270.graphicEbcdicToUnicode[u];
 	} else if (u === this.St){
-            unicodeArray[charIndex] = 8364; // GURU Euro, WTF?
-	} else if (u === Renderer3270.fieldMark || u === Renderer3270.recordMark){
+            unicodeArray[charIndex] = Unicode.euro; // GURU Euro, WTF?
+	} else if (u === Ebcdic.fieldMark || u === Ebcdic.recordMark){
             unicodeArray[charIndex] = Renderer3270.getSpecialSubstitute(u);
 	    if (this.in) {
 		renderingFlags |= 8192;
@@ -5892,7 +6084,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
                         var D,
                             x = screen.Kl[y + 1];
                         null == x && (x = (F as ScreenElement).charToDisplay()), // JOE
-			(D = null != f && f[0] == I && f[1] == x ? 8364 : o[I][x]), // GURU WTF
+			(D = null != f && f[0] == I && f[1] == x ? Unicode.euro : o[I][x]), // GURU WTF
 			logger.debug("Should dbcs render b1=0x" + Utils.hexString(I) +
 				     " b2=0x" + Utils.hexString(x) + " unicode=0x" + Utils.hexString(D));
                         var O = [D];
@@ -5935,7 +6127,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
             bufferPosOfLine += screen.width;
 	    v += this.charHeight;
         }
-        this.ml();
+        this.redrawTransientElements();
 	if (canvas){
 	    this.renderGraphics(canvas,
 				screen.graphicsState,

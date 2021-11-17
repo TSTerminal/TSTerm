@@ -7,6 +7,20 @@ export class CharacterAttributes {    // minified as No
     }
 }
 
+export class RowAndColumn {
+    rows:number;
+    columns:number;
+
+    constructor(rows:number, columns:number){
+	this.rows = rows;
+	this.columns = columns;
+    }
+
+    toString(){
+	return "<Row&Column rows: "+this.rows+" cols: "+this.columns+">";
+    }
+}
+
 export class FieldData {
     position:number;
     
@@ -21,15 +35,95 @@ export class FieldData {
   
 }
 
+/*
+
+Note on CGCSGID: (written as two hyphenated 5-char values)
+
+      CGCSGID             Commonly-Used-In Country
+      00101-00037         United States/Netherlands/Brazil
+      00684-00037         Canada (bilingual)
+      01114-00037         Portugal
+      00265-00273         Austria/Germany
+      00281-00277         Denmark/Norway
+      00285-00278         Finland/Sweden
+      00293-00280         Italy
+      00309-00284         Latin America (Spanish-speaking)
+      00650-00284         Spain
+      00313-00285         United Kingdom
+      00682-00297         France
+      00908-00500         Switzerland
+      01114-00500         Belgium
+
+      The high half is the GCSGID:  here are some well known values
+
+      00934 Korean DBCS including 1,880 UDCs 
+      00935 Traditional Chinese DBCS including 6,204 UDCs 
+      00936 People's Republic of China (PRC) 
+      00937 Simplified Chinese DBCS with UDCs
+      00963 Graphic Escape APL2/TN - 138
+      01172 Japanese Extended (EBCDIC/PC Common) 
+      01173 Korean Extended (EBCDIC/PC Common) 
+      01174 Simplified Chinese Ext (EBCDIC/PC Common) 
+      01175 Traditional Chinese Ext (EBCDIC/PC Common)
+      01176 Thai Extended (EBCDIC/PC Common) 
+      01239 Simplified Chinese Ext (EBCDIC/PC Common)
+
+      CPGID is low half
+
+      00037 USA/Canada - CECP 
+      00256 International #1 
+      00259 Symbols, Set 7 
+      00273 Germany F.R./Austria - CECP 
+      00274 Old Belgium Code Page 
+      00275 Brazil - CECP 
+      00276 Canada (French) - 94 
+      00277 Denmark, Norway - CECP 
+      00278 Finland, Sweden - CECP 
+      00280 Italy - CECP 
+      00281 Japan (Latin) - CECP 
+      00282 Portugal - CECP 
+      00284 Spain/Latin America - CECP 
+      00285 United Kingdom - CECP 
+      00286 Austria/Germany F.R., Alternate (3270) 
+      00290 Japanese (Katakana) Extended 
+      00293 APL (USA) 
+      00297 France - CECP 
+      00300 Japan (Kanji) - Host, DBCS 
+      00301 Japan (Kanji) - PC, DBCS 
+      00310 Graphic Escape APL/TN 
+      00367 ASCII 
+      00420 Arabic Bilingual 
+      00421 Maghreb/French 
+      00423 Greece - 183 
+      00424 Israel (Hebrew) 
+      00425 Arabic/Latin for OS/390 Open Edition 
+      00500 International #5 
+      00803 Hebrew Character Set A 
+      00806 PC Indian Script Code (ISCII-91) 
+      00808 PC Data, Cyrillic, Russian with euro 
+      00813 Greece ISO 8859-7 
+      00819 ISO/ANSI Multilingual 
+      00833 Korean Extended 
+      00834 Korean Hangul - Host, DBCS with UDCs 
+      00835 Traditional Chinese DBCS - Host 
+      00836 Simplified Chinese Extended 
+      00837 Simplified Chinese DBCS-HOST 
+      00838 Thai with Low Tone Marks & Ancient Characters 
+
+      The bt and gt identifiers below are CGCSGID's but more research is needed to
+      see why there are two of these rather than one
+
+*/
+
 export class CharsetInfo {  // minified as kr
     name:string;
     font:string; // this.pt
     isDBCS:boolean; // this.At
-    bt:any;
-    gt:any;
+    bt:number[]|null;
+    gt:number[]|null;   
     Et:any;
     kt:any;
-    St:any;
+    St:number = 0;
     Tt:any;
     
     constructor(name:string,
@@ -38,17 +132,19 @@ export class CharsetInfo {  // minified as kr
 		i:any ,
 		e:any,
 		s:any,
-		u?:any,
+		u?:number, // unicode euro considerations
 		h?:any,
-		r?:any) { // u h r optional only used in Asian fontscjars
+		r?:any) { // h r optional only used in Asian fontscjars
         this.name = name;
 	this.font = font; // was this.pt
 	this.isDBCS = isDBCS;  // only true when all the extra stuff is in constructor - was this.At
 	this.bt = i;  // can be an array of 4 numbers or null
 	this.gt = e;  // can be an array of 4 numbers or null
 	this.Et = s;  // Er,B, Wn Er.W Er.k, what is it???
+	if (u){
+	    this.St = u;  // this is the ebcdicCurrencyChar, relative to this charset
+	}
 	this.kt = h;
-	this.St = u;
 	this.Tt = r;
     }
 
@@ -56,8 +152,61 @@ export class CharsetInfo {  // minified as kr
 
     // fill in the rest later
     static TERMINAL_DEFAULT_CHARSETS = [
-	new CharsetInfo("037: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.B) ];
-
+	new CharsetInfo("037: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.B),
+	new CharsetInfo("1047: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Wn),
+	new CharsetInfo("273: German/Austrian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.W),
+	new CharsetInfo("277: Danish/Norwegian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.K),
+	new CharsetInfo("278: Finnish/Swedish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.H),
+	new CharsetInfo("280: Italian", CharsetInfo.DEFAULT_FONT_FAMILY, !1, null, null, CharacterData.Er.Y),
+	new CharsetInfo("284: Spain/Latin America", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.J),
+	new CharsetInfo("290: Japanese Katakana", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.X),
+	new CharsetInfo("297: French", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.tt),
+	new CharsetInfo("420: Arabic (type 4)", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.lt),
+	new CharsetInfo("424: Hebrew", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.nt),
+	new CharsetInfo("500: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.it),
+	new CharsetInfo("838: Thai ", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.et),
+	new CharsetInfo("870: Croat/Czech/Polish/Serbian/Slovak ", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.st),
+	new CharsetInfo("875: Greek", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ut),
+	new CharsetInfo("918: Urdu", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ht),
+	new CharsetInfo("924: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Wn, 159),
+	new CharsetInfo("937: Chinese Traditional", "NSimSun", !0, [4, 151, 0, 37], [3, 167, 3, 67],
+			CharacterData.Er.B, 0, CharacterData.Er.ft, null),
+	new CharsetInfo("935: Chinese Simplified", "NSimSun", !0, [4, 150, 3, 68], [3, 169, 3, 69],
+			CharacterData.Er.Z, 0, CharacterData.Er.vt, null),
+	new CharsetInfo("930: Japanese", "NSimSun", !0, [4, 148, 1, 34], [3, 233, 1, 44],
+			CharacterData.Er.X, 0, CharacterData.Er.wt, null),
+	new CharsetInfo("931: Japanese", "NSimSun", !0, [0, 101, 0, 37], [3, 233, 1, 44],
+			CharacterData.Er.B, 0, CharacterData.Er.wt, null),
+	new CharsetInfo("939: Japanese", "NSimSun", !0, [4, 148, 4, 3], [3, 233, 1, 44],
+			CharacterData.Er.V, 0, CharacterData.Er.wt, null),
+	new CharsetInfo("1390: Japanese", "NSimSun", !0, [255, 255, 33, 34], [255, 255, 65, 44],
+			CharacterData.Er.X, 225, CharacterData.Er.wt, [66, 225]),
+	new CharsetInfo("1399: Japanese", "NSimSun", !0, [255, 255, 20, 3], [255, 255, 65, 44],
+			CharacterData.Er.V, 225, CharacterData.Er.wt, [66, 225]),
+	new CharsetInfo("933: Korean", "NSimSun", !0, [4, 149, 3, 65], [3, 166, 3, 66],
+			CharacterData.Er.G, 0, CharacterData.Er.dt, null),
+	new CharsetInfo("1025: Cyrillic(Russian)", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.rt),
+	new CharsetInfo("1026: Turkish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.at),
+	new CharsetInfo("1097: Farsi Bilingual", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ot),
+	new CharsetInfo("1112: Baltic Multilingual", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ct),
+	new CharsetInfo("1137: Devanagari", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.L),
+	// 90 is '!', 159 is/was "currency sign" 
+	// 1140 is IBM037 with euro for US 
+	new CharsetInfo("1140: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.B, 159),
+	// 1141 is IBM273 with euro for Austria/Germany
+	new CharsetInfo("1141: German/Austrian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.W, 159),
+	// 1142 is IBM277 with euro for Denmark/Norway
+	new CharsetInfo("1142: Danish/Norwegian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.K, 90),
+	// 1143 is IBM278 with euro for Finland/Sweden
+	new CharsetInfo("1143: Finnish/Swedish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.H, 90),
+	// 1144 is IBM280 with euro for Italy
+	new CharsetInfo("1144: Italian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Y, 159),
+	// 1145 is IBM284 with euro for Spain
+	new CharsetInfo("1145: Spain/Latin America", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.J, 159),
+	new CharsetInfo("1147: French", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.tt, 159),
+	new CharsetInfo("1148: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.it, 159),
+	new CharsetInfo("1153: Croat/Czech/Polish/Serbian/Slovak", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.st, 159)];
+    
     toString():string{
 	return "<CharsetInfo " + this.name + " font=" + this.font + ">";
     }
@@ -664,7 +813,8 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	Utils.superClassWarning("Ui");
     }
     
-    getScreenContents(t:any, l:any, n:any, i:any, e:any, s:any) {   // (ko.prototype.Ci = function (t, l, n, i, e, s) {
+    getScreenContents(t:any, l:any, n:any, i:any, e:any, s:any,
+		      u:any, h:any) {   // (ko.prototype.Ci = function (t, l, n, i, e, s) {
 	Utils.superClassWarning("getScreenContents");
     }
 
@@ -829,7 +979,8 @@ export class VirtualScreen {  // all terminal types, minified as ko
     ye(t:number):any{ // (ko.prototype.ye = function (t) {
 	return { row: Math.floor(t / this.width), column: Math.floor(t % this.width) };
     }
-    Ce(t:number, l:number){ // (ko.prototype.Ce = function (t, l) {
+    // zerobased row,col to screen 
+    rowColZBToScreenPos(t:number, l:number):number{ // (ko.prototype.Ce = function (t, l) {
 	return this.width * t + l;
     }
 
@@ -1019,7 +1170,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	}
 	h ? 4 === h.type && (h = new TypeValuePair(1, String.fromCharCode.apply(null, h.value))) : (h = new TypeValuePair(8, i));
 	logger.debug("keydown, deciding to handleKey based on this.Xn="+this.Xn+" and h="+JSON.stringify(h));
-	this.dumpFields();
+	// this.dumpFields();
 	(!this.Xn || (this.ii && this.ii.includes(h.value))) &&
 	    (logger.debug("keydown mapping result: type=" + h.type +
 			  " value=" + h.value),
@@ -1075,10 +1226,10 @@ export class VirtualScreen {  // all terminal types, minified as ko
 
     handleMouseMove(event:MouseEvent):void{ // (ko.prototype.le = function (t) {
 	if (this.mouseIsDown && this.renderer) {
-            var l = this.renderer.gl(event.offsetX, event.offsetY); // NEEDSWORK .gl
+            var l = this.renderer.getRowAndColumnFromEventXY(event.offsetX, event.offsetY);
             l.columns + 1 <= this.width && (this.yl = l.columns + 1),
 	    l.rows + 1 <= this.height && (this.Rl = l.rows + 1),
-	    this.renderer.ml();
+	    this.renderer.redrawTransientElements();
 	}
     }
     
@@ -1097,7 +1248,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 		return;
 	    }
             this.mouseIsDown = true;
-            var n = this.renderer.gl(event.offsetX, event.offsetY); // NEEDSWORK .gl
+            var n = this.renderer.getRowAndColumnFromEventXY(event.offsetX, event.offsetY);
             this.Sl = n.columns; // NEEDSWORK .Sl .Tl
 	    this.Tl = n.rows;
 	}
@@ -1135,7 +1286,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	    }
 	}
 	if (this.renderer){
-            var coords = this.renderer.gl(l, n); // NEEDSWORK .gl - does this compute mouse coordinates,  was i
+            var coords = this.renderer.getRowAndColumnFromEventXY(l, n); 
 	    logger.debug("click row,col = "+JSON.stringify(coords));
             if ( coords != null) {
 		// declaring e inside this lexical context is legal but seems as cheesy and confusing as hell
@@ -1236,7 +1387,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	    screen.yl = null;
 	    screen.Rl = null;
 	    if (screen.renderer){
-		screen.renderer.ml();
+		screen.renderer.redrawTransientElements();
 	    }
 	};
 	
@@ -1280,14 +1431,14 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	    if (a.renderer){
 		a.renderer.hasFocus = !1;
 		eventLogger.info("Terminal focus lost");
-		a.renderer.ml();
+		a.renderer.redrawTransientElements();
 	    }
 	}
 	var focusGained = function(event:any){
 	    if (a.renderer){
 		a.renderer.hasFocus = !0;
 		eventLogger.info("Terminal gained focus");
-		a.renderer.ml();
+		a.renderer.redrawTransientElements();
 	    }
 	}
 	if (textArea){ // factoring null from type, God Bless Typescript
@@ -2057,14 +2208,18 @@ export class BaseRenderer {   // minified as Ea
 	this.yt = -1; // was 0 in constructor, what does this mean
     }
     
-    gl(t:number,l:number):any{ // Ea.prototype.gl = function (t, l) {
-        return (
-            this.screen.canvas,
-            this.screen,
-            1 == this.scaleMethod && ((t *= this.scaleH), (l *= this.scaleV)),
-            (t >= this.activeWidth|| l >= this.activeHeight) && Utils.renderLogger.debug("canvasX or canvasY is greater than activeWidth or activeHeight"),
-            { rows: Math.floor(l / this.charHeight), columns: Math.floor(t / this.charWidth) }
-        );
+    getRowAndColumnFromEventXY(x:number,y:number):RowAndColumn { // Ea.prototype.gl = function (t, l) {
+	if (!this.screen.canvas){
+	    throw "Illegal State, screen does not have canvas";
+	}
+	if (this.scaleMethod == 1){
+	    x *= this.scaleH;
+	    y *= this.scaleV;
+	}
+	if (x >= this.activeWidth|| y >= this.activeHeight){
+	    Utils.renderLogger.debug("canvasX or canvasY is greater than activeWidth or activeHeight");
+	}
+        return new RowAndColumn(Math.floor(y / this.charHeight), Math.floor(x / this.charWidth));
     }
 
     getSelectionCTXOrFail():CanvasRenderingContext2D{
@@ -2076,12 +2231,12 @@ export class BaseRenderer {   // minified as Ea
     }
 
     // clearing selection canvas, and then drawing what?? 
-    ml(){ // Ea.prototype.ml = function () {
+    redrawTransientElements(){ // Ea.prototype.ml = function () {
         let screen = this.screen;
         let canvas:HTMLCanvasElement = screen.getCanvasOrFail();
         var ctx:CanvasRenderingContext2D = this.getSelectionCTXOrFail();
         ctx.font = this.font;
-        BaseRenderer.setFillColor(ctx, 255, 255, 255, 0);
+        BaseRenderer.setFillColor(ctx, 255, 255, 255, 0);  // fully transparent white
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.clearRect(0, 0, this.activeWidth, this.activeHeight);
         if ((this.hasFocus === true) &&
@@ -2089,21 +2244,26 @@ export class BaseRenderer {   // minified as Ea
 	    (this.Vt > 0)){
 	    this.showTheCursor(ctx, screen.cursorPos);
 	}
+	/*
+	  The selectionBox is always drawn on the selection canvas
+	 */
         if (null != screen.Sl &&
 	    null != screen.Tl &&
 	    null != screen.Rl &&
 	    null != screen.yl){
-	    this.Cl(screen.Sl, screen.Tl, screen.yl, screen.Rl);
+	    this.drawSelectionBox(screen.Sl, screen.Tl, screen.yl, screen.Rl);
 	}
         if (1 == screen.oiaEnabled){
-            this.Nl(ctx, screen, function () {
+            this.drawInfoArea(ctx, screen, function () {
                 screen.Pl();
             });
 	}
     }
     
     // drawOIA
-    Nl(ctx:CanvasRenderingContext2D, screen:VirtualScreen, callAfter:any):void{ // Ea.prototype.Nl = function (t, l, n) {
+    drawInfoArea(ctx:CanvasRenderingContext2D,
+		 screen:VirtualScreen,
+		 callAfter:any):void{ // Ea.prototype.Nl = function (t, l, n) {
         let canvas:HTMLCanvasElement = screen.getCanvasOrFail();
         var lineWidthSave:number = ctx.lineWidth;
         ctx.beginPath();
@@ -2121,8 +2281,7 @@ export class BaseRenderer {   // minified as Ea
 	}
     }
 
-    // drawSelectionBox
-    Cl(t:number, l:number, n:number, i:number):void{ // Ea.prototype.Cl = function (t, l, n, i) {
+    drawSelectionBox(t:number, l:number, n:number, i:number):void{ // Ea.prototype.Cl = function (t, l, n, i) {
         if (t != n && l !== i) {
             (l = l > i ? l + 1 : l), (t = t > n ? t + 1 : t);
             var e = Math.min(t, n),
@@ -2142,7 +2301,7 @@ export class BaseRenderer {   // minified as Ea
     
     xl(){ // (Ea.prototype.xl = function () {
 	clearTimeout(this.timerIntervalID),
-	1 != this.Kt && ((this.Kt = !0), this.ml()),
+	1 != this.Kt && ((this.Kt = !0), this.redrawTransientElements()),
 	3 == this.Vt && this.timerDelay >= 100 && this.ll();
     }
     
@@ -2151,7 +2310,7 @@ export class BaseRenderer {   // minified as Ea
 	this.timerIntervalID = setInterval(function () {
             (renderer.Kt = !renderer.Kt);
 	    if (!0 === renderer.hasFocus){
-		renderer.ml();
+		renderer.redrawTransientElements();
 	     }
 	}, this.timerDelay);
     }

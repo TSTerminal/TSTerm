@@ -159,13 +159,20 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	return this.charsetInfo;
     }
 
+    static unicodeEuro:number = 0x20AC; // 8364
+
     Ql(t:number){ // (Oo.prototype.Ql = function (t) {
 	if (8364 == t && this.charsetInfo.St > 0) {
 	    return this.charsetInfo.St;
 	}
 	for (var l = this.charsetInfo.Et, n = 0; n < l.length; n++) if (l[n] === t) return n;
 	var i = this.charsetInfo.kt;
-	if (null != i) for (var e = 0; e < i.length; e++) if (null != i[e]) for (var s = 0; s < i[e].length; s++) if (i[e][s] == t) return (e << 8) | s;
+	if (null != i){
+	    for (var e = 0; e < i.length; e++)
+		if (null != i[e])
+		    for (var s = 0; s < i[e].length; s++)
+			if (i[e][s] == t) return (e << 8) | s;
+	}
 	return 0;
     }
     
@@ -297,7 +304,7 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	}
 	if (this.renderer){
 	    let renderer:PagedRenderer = this.renderer as PagedRenderer;
-	    var l = renderer.Ql(t); // NEEDSWORK .Ql
+	    var l = renderer.unicodeToEBCDIC(t); // NEEDSWORK .Ql
 	    if (l >= 64 && l < 255) {
 		logger.debug("normal press code=0x" + Utils.hexString(t) + " ebcdic=0x" + Utils.hexString(l));
 		if (this.enterCharacterAtCursor(l)) { 
@@ -389,9 +396,9 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 
 
 export class PagedRenderer extends BaseRenderer {  // minified as ka
-    St:any; // unknown yet
-    
-    
+    St:number = 0;  /* probably ebcdic currency/euro symbol
+		       set from charsetInfo.st (screen.It.St) during setCharsetInfo
+		    */
     
     constructor(canvas:HTMLCanvasElement|null, virtualScreenArg:VirtualScreen, unicodeTable:any){
 	super(virtualScreenArg,unicodeTable);
@@ -436,16 +443,20 @@ export class PagedRenderer extends BaseRenderer {  // minified as ka
 	if (3 == this.Vt && this.timerDelay > 0){
 	    this.ll();
 	}
-	// undeclared's
-	this.St;  // set from charsetInfo.st (screen.It.St) during setCharsetInfo
     }
 
-    Ql(t:number){ // (ka.prototype.Ql = function (t) {
+    // least efficient reverse map ever!! hahahahaha!
+    // maybe a backmapping Map<number,number> someday!
+    unicodeToEBCDIC(t:number){ // (ka.prototype.Ql = function (t) {
         if (8364 == t && this.St > 0) return this.St;
         for (var l = 0; l < this.unicodeTable.length; l++) if (this.unicodeTable[l] == t) return l;
         return 0;
     }
 
+    /* Is this really returning a string or a number?
+       This seems crazy.  Fortunately only called from one, perhaps never called place.
+       Still this messes up TypeScript with such weird type ambiguity
+     */
     Gl(t:number){ // ka.prototype.Gl = function (t) {
         return 8364 == t && this.St > 0 ? this.St : this.unicodeTable[t].toString(16);
     }

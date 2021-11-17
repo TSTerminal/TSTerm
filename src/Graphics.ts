@@ -41,7 +41,137 @@ import { Utils } from "./utils.js";
   
   GDDM Exits:
     https://www.ibm.com/docs/it/gddm?topic=gddm-specifying-user-exits#HDREXITS
-    
+
+  TSO/VTA/TCAS Exits:
+    ZOWEDVCE - how to support cleaning and do tunnelling
+    VTAM TCAS or TSO exits would be needed to implement
+      See https://www.ibm.com/docs/en/zos/2.1.0?topic=routines-tsovtam-exit
+      Could IKT3270I demultiplex the data and IKTIDSX1 multiplex it
+
+
+  Web Integration:
+    https://docs.microsoft.com/en-us/javascript/api/excel?view=excel-js-preview
+
+  GDDM Order list
+    https://www.ibm.com/docs/ja/gddm?topic=descriptions-gdf-orders-summary
+
+  IDEA 
+    dynamically getting plib to find tables and auto import/export to excel with structure
+    or BMS Map
+
+  GSUWIN 
+    only as uniform as the reported geometry 
+    24x80 with 16*9 box is 24x16   384x720 ->   32x60 8x15->
+
+    62x132 16x9   960 120
+
+  Destination/Origin
+    Works with structured fields to multiplex the outbound data to multi-device receivers
+    and inbound to say who is saying what back to the host
+    0000 is the default/primary display 
+
+    This is why ReadPartitionQuery is preceded by a destination/origin thingy in GDDM's negotation IFF
+     The PCLK aux device was shown
+
+    See this reply from PCOMM:
+
+         Reply 0x99 means - indicates direct access support of one or more aux devices (IBM or OEM).
+           That also means Dest/Origin can be used, and RPQ query list can be used (i thought it was always OK)
+
+     Does DOID work only in one WSF unit, and not persist across?
+
+     
+Reply 0x99: AUXILIARY_DEVICE, len=0x6:
+00000000  00068199 0000                                                            |..ar..|
+
+Reply 0x95: DISTRIBUTED_DATA_MANAGEMENT, len=0xc:
+00000000  000C8195 00001F40 1F400101                                               |..an... . ..|
+
+   - 1F40 bytes per input and output 
+     01   Subsets supported
+     01   Subset ID
+
+Reply 0x9E: IBM_AUXILIARY_DEVICE, len=0x13:
+00000000  0013819E 80000300 0E000104 01810104  03000F                              |..a..........a.....|
+
+    819E  (This comes from PCOMM book)
+    80    Flags supports query/queryList
+    00    reserved
+    0300  max inbound DDM bytes
+    0E00  max outbound DDM bytes
+    01    device type 01-display, 02-printer
+    // the param below is an SDP (with ID=0x01)
+    04    parameter length
+    01    direct access (what about it?? a flag??)
+    8101  The DOID for use in Destination/Origin ID !!
+
+
+Reply 0x95: DISTRIBUTED_DATA_MANAGEMENT, len=0x1d:
+00000000  001D8195 00000300 0E000101 04018102  0902D7C3 D3D20110 80040300 03       |..an..........a...PCLK.......|
+
+  SPD 09 02 PCLK011080 DDM application name
+
+Reply 0x9E: IBM_AUXILIARY_DEVICE, len=0x21:
+00000000  0021819E 80000300 0E000204 01810304  0300030E 0202B901 F4D7C3E2 E6C7D7D9 |..a..........a..........4PCSWGPR|
+00000020  E3     
+
+    819E
+    80
+    00
+    0300
+    0E00 
+    02   Device Type printer
+    SDP #1 
+    04 01
+    8103   (DOID)  
+    SDP #2
+    04 03 (PCLK protocol controls - allows 1013)
+    0003   PCKL Version   (0001 is said to be version 1.1)  how high can this go, how does it affect graphics, vs other qreps
+    SDP #3
+    0E 02 (what the fnuk is this)?
+    02 B9 01 F4
+    D7C3E2E6C7D7E3  PCSWGPRT  (PC software graphical printer????) sounds promising
+
+   Think about characters sets and graphics char sets
+
+Reply 0x85: CHARACTER_SETS, len=0x29:
+00000000  00298185 F2400910 60000000 07000000  02B90025 0100F103 C3013602 80FF0000 |..ae2 ..-.............1.C.......|
+00000020  00000380 FF000000 00
+    F2  GE support Multiple LCID, Load PSSF support Load PS Extended support CGCSGID present.
+    40  LOAD PS slot size match not required, CCSID not present.
+    09  Char slot width
+    10  Char slot height (16 in decimal)
+    60000000  (formats 2 and 3 supported in a bit mask)
+    07 bytes per char set identifier
+    PS Store number
+    flags
+
+  Gotta Build an AuxDeviceMap when querying
+
+  Gotta Give an aux device (maybe) when running Term.  Basically, does GDDM even see our device's higher-level
+  capabilities if not under right aux device.                
+
+  What's a 3270 Alphanumeric Partition, and how does it get fed from the host?
+
+  Weds/Thursday
+    Line width and type is confusing?
+    Go to C programs
+    OIA thing
+    Multi-render bug
+    Can it ever generate primitivies like bezier and fillet?
+    C programs to drive GDDM and Load Programmed Symbols
+    Enumerate HLLAPI-like functions
+      Events to insulate keyboard ready or not.
+      Events connection lost
+      Events connection gained
+      GURU input needed
+      // getDimensions
+      // get all fields definitions in order
+      //   FieldFacade
+      //     #private members to hide internals
+      //   
+    OIA Draw bug trace from 
+    Open and use Excel with JS API
 
     Begin Segment, per AFP
 
@@ -481,7 +611,7 @@ class Instruction extends GraphicsData implements Renderable {
     }
 
     getU8(pos:number):number{
-	return super.getU16(this.offset+pos);
+	return super.getU8(this.offset+pos);
     }
 
     getU16(pos:number):number{
@@ -641,7 +771,7 @@ class Order extends GraphicsData implements Renderable {
     }
 
     getU8(pos:number):number{
-	return super.getU16(this.offset+pos);
+	return super.getU8(this.offset+pos);
     }
 
     getU16(pos:number):number{
@@ -664,41 +794,110 @@ class Order extends GraphicsData implements Renderable {
 	env.areaHasOutline = ((flags & 0x40) === 0x40);
 	env.areaFillRule = (flags & 0x20) ? "nonzero" : "evenodd";
 	env.areaPath = new Path2D();
+	console.log("JOEG BEGIN AREA "+env.areaPath);
     }
+
+    static p2Start = 10;
+
+    static boxTest = false;
 
     endArea(env:GOCAEnvironment,
 	    ctx:CanvasRenderingContext2D):void {
 	let logger = Utils.graphicsLogger;
+	ctx.globalAlpha = 1.0;
 	if (env.areaPath){
-	    ctx.fill(env.areaPath,env.areaFillRule);
+	    console.log("JOEG fill Mk3 "+env.areaPath+" rule="+env.areaFillRule);
+	    env.areaPath.closePath();
+	    ctx.fill(env.areaPath,"nonzero"); // env.areaFillRule);
 	    if (env.areaHasOutline){
 		ctx.stroke(env.areaPath);
 	    }
 	} else {
+	    console.log("JOEG No area set for EndArea");
 	    logger.warn("No area set for EndArea");
+	}
+	if (Order.boxTest){
+	    let p2 = new Path2D();
+	    let p2Start = Order.p2Start;
+	    ctx.beginPath();
+	    ctx.moveTo(p2Start,150);
+	    ctx.lineTo(p2Start,180);
+	    ctx.stroke();
+	    let y = 70;
+	    let size = 8;
+	    console.log("JOEG p2Start="+p2Start);
+	    p2.moveTo(p2Start,     y);
+	    p2.lineTo(p2Start,     y+size);
+	    p2.lineTo(p2Start+size,y+size);
+	    p2.lineTo(p2Start+size,y);
+	    p2.lineTo(p2Start,     y);
+	    p2.closePath();
+	    Order.p2Start = p2Start+30;
+	    ctx.fillStyle = "yellow";
+	    ctx.strokeStyle = "white";
+	    ctx.fill(p2,"evenodd");
+	    ctx.stroke(p2);
+	    y = 90;
+	    ctx.beginPath();
+	    ctx.moveTo(p2Start,     y);
+	    ctx.lineTo(p2Start,     y+size);
+	    ctx.lineTo(p2Start+size,y+size);
+	    ctx.lineTo(p2Start+size,y);
+	    ctx.lineTo(p2Start,     y);
+	    ctx.closePath();
+	    ctx.fillStyle = "red";
+	    ctx.strokeStyle = "blue";
+	    ctx.fill("nonzero");
+	    ctx.stroke();
 	}
 	env.areaPath = null;
     }
 	    
+    /* if new line move to is fine
+       but if area, there should only be one
 
+       We move if 
+         area ? first
+         ! firstPoint and not in area
+
+         case          area   notArea
+           LINE a,b       M         M
+           CLINE c,d      L         L
+           CLINE d,e      L         L
+    */
+    
     polyline(env:GOCAEnvironment,
 	     ctx:CanvasRenderingContext2D,
 	     pointsAreDeltas:boolean,
 	     useCurrent:boolean,
 	     dataStart:number):void{
-	let path = (env.areaPath ? env.areaPath : new Path2D());
+	// if not path and useCurrent
+	let path:Path2D = env.areaPath ? env.areaPath : new Path2D();
 	let len = this.headerLength + this.dataLength;
-	if (useCurrent){
+	if (!env.areaPath){
+	    console.log("JOEG no area move to "+env.currentPos);
 	    path.moveTo(env.currentPos.x,env.currentPos.y);
 	}
+	if (!useCurrent){
+	    let firstPointOrDelta = this.coordinateAt(2);
+	    let firstPointX = (pointsAreDeltas ? env.currentPos.x + firstPointOrDelta.x : firstPointOrDelta.x);
+	    let firstPointY = (pointsAreDeltas ? env.currentPos.y + firstPointOrDelta.y : firstPointOrDelta.y);
+	    env.currentPos = new Coordinate(firstPointX,firstPointY);
+	    console.log("JOEG firstPoint move "+firstPointX,firstPointY);
+	    path.moveTo(firstPointX,firstPointY);
+	}
+	let anyLines:boolean = false;
 	for (let pos = dataStart; pos<len; pos+=4){
 	    let pointOrDelta = this.coordinateAt(pos);
 	    let pointX = (pointsAreDeltas ? env.currentPos.x + pointOrDelta.x : pointOrDelta.x);
 	    let pointY = (pointsAreDeltas ? env.currentPos.y + pointOrDelta.y : pointOrDelta.y);
-	    env.currentPos = new Coordinate(pointX,pointY);
+	    let newPoint = new Coordinate(pointX,pointY);
+	    console.log("JOEG poly line was "+env.currentPos+" to "+newPoint);
+	    env.currentPos = newPoint;
 	    path.lineTo(pointX,pointY);
+	    anyLines = true;
 	}
-	if (!env.areaPath){
+	if (!env.areaPath && anyLines){
 	    ctx.stroke(path);
 	}
     }
@@ -710,11 +909,132 @@ class Order extends GraphicsData implements Renderable {
 	
     }
 
+    drawMark(env:GOCAEnvironment,
+	     ctx:CanvasRenderingContext2D,
+	     center:Coordinate):void{
+	console.log("JOEG mark at "+center);
+	let gc = GraphicsConstants;
+	let logger = Utils.graphicsLogger;
+	let width = 4;
+	let height = 4;
+	let halfWidth = width/2;
+	let halfHeight = height/2;
+	switch (env.markerSymbol){
+	    case gc.MARKER_DEFAULT: 
+	    case gc.MARKER_CROSS:  // 'X' not '+'
+		{
+		    let path = new Path2D();
+		    path.moveTo(center.x-halfWidth,center.y-halfHeight);
+		    path.lineTo(center.x+halfWidth,center.y+halfHeight);
+		    ctx.stroke(path);
+		    path = new Path2D();
+		    path.moveTo(center.x-halfWidth,center.y+halfHeight);
+		    path.lineTo(center.x+halfWidth,center.y-halfHeight);
+		    ctx.stroke(path);
+		}
+		break;
+	    case gc.MARKER_PLUS:
+		{
+		    let path = new Path2D();
+		    path.moveTo(center.x+halfWidth,center.y);
+		    path.lineTo(center.x-halfWidth,center.y);
+		    ctx.stroke(path);
+		    path = new Path2D();
+		    path.moveTo(center.x,center.y+halfHeight);
+		    path.lineTo(center.x,center.y-halfHeight);
+		    ctx.stroke(path);
+		}
+		break;
+	    case gc.MARKER_OUTLINE_DIAMOND:
+		{
+		    let path = new Path2D();
+		    path.moveTo(center.x+halfWidth,center.y);
+		    path.lineTo(center.x,center.y+halfHeight);
+		    path.lineTo(center.x-halfWidth,center.y);
+		    path.lineTo(center.x,center.y-halfHeight);
+		    path.closePath();
+		    ctx.stroke(path);
+		}
+		break;
+	    case gc.MARKER_OUTLINE_SQUARE:		
+		ctx.strokeRect(center.x-halfWidth,center.y-halfHeight,height,width);
+		break;
+	    case gc.MARKER_ASTERISK_6:
+	    case gc.MARKER_ASTERISK_8:
+		{
+		    let path = new Path2D();
+		    path.moveTo(center.x-halfWidth,center.y-halfHeight);
+		    path.lineTo(center.x+halfWidth,center.y+halfHeight);
+		    ctx.stroke(path);
+		    path = new Path2D();
+		    path.moveTo(center.x-halfWidth,center.y+halfHeight);
+		    path.lineTo(center.x+halfWidth,center.y-halfHeight);
+		    ctx.stroke(path);
+		    // only do the horizontal line if in the 8-point asterisk
+		    if (env.markerSymbol == gc.MARKER_ASTERISK_8){
+			path = new Path2D();
+			path.moveTo(center.x+halfWidth,center.y);
+			path.lineTo(center.x-halfWidth,center.y);
+			ctx.stroke(path);
+		    }
+		    path = new Path2D();
+		    path.moveTo(center.x,center.y+halfHeight);
+		    path.lineTo(center.x,center.y-halfHeight);
+		    ctx.stroke(path);
+		}
+	    case gc.MARKER_FILLED_DIAMOND:
+		{
+		    let path = new Path2D();
+		    path.moveTo(center.x+halfWidth,center.y);
+		    path.lineTo(center.x,center.y+halfHeight);
+		    path.lineTo(center.x-halfWidth,center.y);
+		    path.lineTo(center.x,center.y-halfHeight);
+		    path.closePath();
+		    ctx.fill(path);
+		}
+		break;
+	    case gc.MARKER_FILLED_SQUARE:
+		ctx.strokeRect(center.x-halfWidth,center.y-halfHeight,height,width);
+		break;
+	    case gc.MARKER_DOT:
+		{
+		    let path = new Path2D();
+		    path.arc(center.x, center.y, 2, 0, 2 * Math.PI);
+		    ctx.fill(path);
+		}
+		break;
+	    case gc.MARKER_OUTLINE_CIRCLE:
+		{
+		    let path = new Path2D();
+		    path.arc(center.x, center.y, halfWidth, 0, 2 * Math.PI);
+		    ctx.stroke(path);
+		}
+		break;
+	    case gc.MARKER_BLANK:
+		break;
+	    default:
+		logger.warn("unknown marker symbol 0x"+Utils.hexString(env.markerSymbol));
+	}
+    }
+
     marks(env:GOCAEnvironment,
 	  ctx:CanvasRenderingContext2D,
 	  useCurrent:boolean,
 	  dataStart:number):void{
-
+	let len = this.headerLength + this.dataLength;
+	console.log("JOEG marks useCur="+useCurrent+" len="+len+" dataStart="+dataStart);
+	if (!useCurrent && len < 6){ // might not ever happen
+	    return;
+	}
+	let firstPoint = (useCurrent? env.currentPos : this.coordinateAt(2));
+	console.log("JOEG mark first "+firstPoint);
+	this.drawMark(env,ctx,firstPoint);
+	env.currentPos = firstPoint;
+	for (let pos = dataStart; pos<len; pos+=4){
+	    let newPoint = this.coordinateAt(pos);
+	    this.drawMark(env,ctx,newPoint);
+	    env.currentPos = newPoint;
+	}
     }
 
     box(env:GOCAEnvironment,
@@ -753,6 +1073,12 @@ class Order extends GraphicsData implements Renderable {
     endImage(env:GOCAEnvironment,
 	     ctx:CanvasRenderingContext2D):void {
 
+    }
+
+    setMarkerCell(env:GOCAEnvironment,
+		  ctx:CanvasRenderingContext2D){
+	let logger = Utils.graphicsLogger;
+	logger.warn("need to handle set marker cell someday");
     }
 
     static getComponentByteWidth(bits:number):number {
@@ -822,6 +1148,7 @@ class Order extends GraphicsData implements Renderable {
     
     render(env:GOCAEnvironment,
 	   ctx:CanvasRenderingContext2D):void{
+	let logger = Utils.graphicsLogger;
 	let order = this;
 	let code = this.orderCode;
 	let gc = GraphicsConstants;
@@ -834,8 +1161,13 @@ class Order extends GraphicsData implements Renderable {
 		env.patternSetID = this.getU8(1);
 		break;
 	    case gc.ORDER_GSCOL:  // Set Color
-		env.extendedColor = 0xFF00 | this.getU8(1);
-		env.colorMode = gc.COLOR_MODE_EXTENDED;
+		{
+		    let colorArg = this.getU8(1);
+		    env.extendedColor = 0xFF00 | colorArg;
+		    logger.debug("JOEG GSCOL arg=0x"+Utils.hexString(colorArg)+" extCol= 0x"+Utils.hexString(env.extendedColor));
+		    env.colorMode = gc.COLOR_MODE_EXTENDED;
+		    env.setColors(ctx);
+		}
 		break;
 	    case gc.ORDER_GSMX:   // Set Mix
 		env.mix = this.getU8(1);
@@ -845,13 +1177,14 @@ class Order extends GraphicsData implements Renderable {
 		break;
 	    case gc.ORDER_GSLW:   // Set Line Width
 		env.lineWidth = this.getU8(1);
+		ctx.lineWidth = env.lineWidth;
 		env.lineMode = gc.LINE_MODE_WHOLE;
 		break;
 	    case gc.ORDER_GSLE:   // Set Line End
-		env.lineEndType = this.getU8(1);
+		env.setLineEndType(ctx,this.getU8(1));
 		break;
 	    case gc.ORDER_GSLJ:   // Set Line Join
-		env.lineJoinType = this.getU8(1);
+		env.setLineJoinType(ctx,this.getU8(1));
 		break;
 	    case gc.ORDER_GSCP:   // Set Current Position
 		env.currentPos = this.coordinateAt(2);
@@ -863,12 +1196,17 @@ class Order extends GraphicsData implements Renderable {
 		break;
 	    case gc.ORDER_GSECOL: // Set Extended Color
 		env.extendedColor = this.getU16(2);
+		env.colorMode = gc.COLOR_MODE_EXTENDED;
+		env.setColors(ctx);
 		break;
 	    case gc.ORDER_GSPT:   // Set Pattern Symbol
 		env.patternSymbol = this.getU8(1);
 		break;
 	    case gc.ORDER_GSMT:   // Set Marker Symbol
 		env.markerSymbol = this.getU8(1);
+		break;
+	    case gc.ORDER_GSMC:   // Set Marker Cell
+		order.setMarkerCell(env,ctx);
 		break;
 	    case gc.ORDER_GSMS:   // Set Marker Set
 		env.markerSetID = this.getU8(1);
@@ -1193,7 +1531,12 @@ class Segment extends GraphicsData implements Renderable {
 	try {
 	    ctx.save();
 	    segmentEnv.setColors(ctx);
-	    this.orders.forEach( order => order.render(segmentEnv,ctx));
+	    let orderArray = this.orders;
+	    for (let i=0; i<orderArray.length; i++){
+		let order = this.orders[i];
+		console.log("JOEG render order loop "+order);
+		order.render(segmentEnv,ctx);
+	    }
 	} catch (e){
 	    logger.warn("Segment render failed "+e);
 	} finally {
@@ -1292,17 +1635,76 @@ class GOCAEnvironment {
 	return "<GOCAEnvironment>";
     }
 
-    setColors(ctx:CanvasRenderingContext2D):void{
-	ctx.fillStyle = this.getCanvasColor();
-	ctx.strokeStyle = this.getCanvasColor();
+    setLineJoinType(ctx:CanvasRenderingContext2D,
+		    newJoinType:number):void{
+	let logger = Utils.graphicsLogger;
+	let gc = GraphicsConstants;
+	switch (newJoinType){
+	    case gc.LINE_JOIN_DEFAULT:
+	    case gc.LINE_JOIN_ROUND:
+		ctx.lineJoin = "round";
+		break;
+	    case gc.LINE_JOIN_BEVEL:
+		ctx.lineJoin = "bevel"
+		break;
+	    case gc.LINE_JOIN_MITER:
+		ctx.lineJoin = "miter";
+		break;
+	    default:
+		logger.warn("unknown line join type "+Utils.hexString(newJoinType));
+		ctx.lineJoin = "round";
+		newJoinType = gc.LINE_JOIN_ROUND;
+		break;
+	}
+	this.lineJoinType = newJoinType;
     }
+
+    setLineEndType(ctx:CanvasRenderingContext2D,
+		   newEndType:number):void{
+	let logger = Utils.graphicsLogger;
+	let gc = GraphicsConstants;
+	switch (newEndType){
+	    case gc.LINE_END_ROUND:
+		ctx.lineCap = "round";
+		break;
+	    case gc.LINE_END_FLAT:
+		ctx.lineCap = "butt"
+		break;
+	    case gc.LINE_END_SQUARE:
+		ctx.lineCap = "square";
+		break;
+	    default:
+		logger.warn("unknown line end type "+Utils.hexString(newEndType));
+		ctx.lineJoin = "round";
+		newEndType = gc.LINE_END_ROUND;
+		break;
+	}
+	this.lineEndType = newEndType;
+    }
+
+    
+    setColors(ctx:CanvasRenderingContext2D):void{
+	let canvasColor = this.getCanvasColor();
+	ctx.fillStyle = canvasColor; // "rgb(100,200,100)";
+	ctx.strokeStyle = canvasColor;
+    }
+
+    /*
+      All Colors start with 0xF or 0x0
+      So, any color from 0x1000->EFFF is "open season"
+
+      a 15-bit color space is proposed at 
+      32 levels per 
+     */
 
     getCanvasColor():string{
 	switch (this.colorMode){
 	    case GraphicsConstants.COLOR_MODE_EXTENDED:
 		{
 		    let defaultColor = "rgb(0,255,0)";
-		    switch (this.extendedColor){
+		    let color = this.extendedColor;
+		    console.log("JOEG getCanvasColor extended=0x"+Utils.hexString(color));
+		    switch (color){
 			case 0x0000:
 			case 0xFF00:
 			    return defaultColor;
@@ -1347,7 +1749,15 @@ class GOCAEnvironment {
 			case 0x0010: // Brown
 			    return "rgb(144,48,0)";
 			default:
-			    return defaultColor;
+			    if (color >= 0x1000 && color <= 0x8FFF){
+				let rgb15 = (color-0x1000)&0x7FFF;
+				let rgbSpec = ("rgb("+(((rgb15>>10)&0x1F)<<3)+","+
+				    (((rgb15>>5)&0x1F)<<3)+","+((rgb15&0x1F)<<3)+")");
+				console.log("JOEG made extended ECOL "+rgbSpec);
+				return rgbSpec;
+			    } else {
+				return defaultColor;
+			    }
 		    }
 		}
 	    case GraphicsConstants.COLOR_MODE_PROCESS:
@@ -1434,7 +1844,7 @@ export class GraphicsObject {
 		    let end = pos+segmentDataLength;
 		    while (pos < end){
 			let b1:number = this.data[pos]&0xff;
-			console.log("seg parse loop 0x"+Utils.hexString(b1)+" at pos="+pos);
+			// console.log("seg parse loop 0x"+Utils.hexString(b1)+" at pos="+pos);
 			if (b1 === 0){
 			    // no op order
 			    segment.orders.push(new Order(0,1,0,this.data,pos));
@@ -1493,7 +1903,6 @@ export class GraphicsState {
 	this.renderables.forEach(function(renderable:Renderable){
 	    renderable.render(env,ctx);
 	});
-
 	// ctx has save() and restore()
 	// segments should always save restore
 	// SCD instruction makes permanent changes that don't restore
