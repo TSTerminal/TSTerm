@@ -2761,14 +2761,17 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 		case 88:
                     t[n++] = 88;
 		}
+	    /*
+	      too harsh
 	    if (parser == null){
 		throw "Illegal State, parser null deep in body of getOIAArray";
 	    }
-            if ((renderer.jt > 0 && ((n = 53),
-				     (t[n++] = VirtualScreen3270.Pt[0]),
-				     (t[n++] = VirtualScreen3270.Pt[1]),
-				     (t[n] = VirtualScreen3270.Pt[2])),
-		 parser.xu)) {
+	    */
+	    renderer.jt > 0 && ((n = 53),
+				(t[n++] = VirtualScreen3270.Pt[0]),
+				(t[n++] = VirtualScreen3270.Pt[1]),
+				(t[n] = VirtualScreen3270.Pt[2]));
+            if (parser && parser.xu) {
 		n = 76;
 		let l = parser.xu;
 		for (let i = 17; i > -1; i--)

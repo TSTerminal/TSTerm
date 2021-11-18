@@ -84,7 +84,7 @@ export class TerminalLauncher{
 				 cnxnSettings:any, // n, includes charsetName
 				 i:any,  // has contextRightClick and keyboardMappings
 				 callbacks:any, // a js object with k-v paairs
-				 additionalScreenProperties:any) {   // "e" clone-copy from this if supplied
+				 additionalScreenProperties:any):VirtualScreen3270 {   // "e" clone-copy from this if supplied
 	var securityType = 0;
 	var u = 0; // dunno 
 	var screen = new VirtualScreen3270(80, 24); // formerly h
@@ -170,6 +170,7 @@ export class TerminalLauncher{
         if (screen.callbacks && ("function" == typeof screen.callbacks.onInit)){
 	    screen.callbacks.onInit();
 	}
+	return screen;
     }
     
 }
