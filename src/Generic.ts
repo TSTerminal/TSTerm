@@ -890,6 +890,18 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	}, 200);
     }
 
+    handleContainerResizeFromUI(parentDiv:HTMLElement,
+				t:VirtualScreen,
+				l?:number,
+				n?:number){ // (ko.prototype.handleContainerResizeFromUI = function (parentDiv, t, l, n) {
+	// i think this is idempotent/nilpotent
+	if (null != t){  
+	    this.zn = t.zn;
+	    this.Jn = t.Jn;
+	}
+	this.handleContainerResize(parentDiv, l, n);
+    }
+
     userAttentionSound(){ // (ko.prototype.oi = function () {
 	this.attentionSound && this.attentionSound.play();
     }
