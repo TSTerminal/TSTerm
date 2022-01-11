@@ -8,7 +8,7 @@ This code was based from a minified implementation of a terminal included in the
 
 https://github.com/zowe/tn3270-ng2
 
-This prior work is licencsed under EPL-2.0 and TSTerm continues to use EPL-2.0.
+This prior work is licencsed under EPL-2.0 and TSTerm continues to use EPL-2.0. 
 
 This implementation's purpose is to provide a proper Open Source (not minified) means of adding features and fixing bugs in the terminal that Zowe relies upon and for general OSS usage.
 
