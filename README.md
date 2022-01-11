@@ -12,3 +12,10 @@ This prior work is licencsed under EPL-2.0 and TSTerm continues to use EPL-2.0.
 
 This implementation's purpose is to provide a proper Open Source (not minified) means of adding features and fixing bugs in the terminal that Zowe relies upon and for general OSS usage.
 
+## Building this Package
+
+See Building.md
+
+## Contributing to this package.
+
+See Contributing.md
