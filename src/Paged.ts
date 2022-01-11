@@ -1,3 +1,14 @@
+/*
+  This program and the accompanying materials are
+  made available under the terms of the Eclipse Public License v2.0 which accompanies
+  this distribution, and is available at https://www.eclipse.org/legal/epl-v20.html
+  
+  SPDX-License-Identifier: EPL-2.0
+  
+  Copyright Contributors to the Zowe Project.
+  Copyright Contributors to the Open Mainframe Project's TSTerm Project
+*/
+
 import { Utils } from "./utils.js";
 import { VirtualScreen, TypeValuePair, CharacterAttributes, FieldData, OIALine, CharsetInfo, BaseRenderer } from "./generic.js";
 
@@ -365,7 +376,7 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
             }
             return null;
         }
-	// why this second loop, GURU
+	// why does this second loop exist, *UNKNOWN* logic
         for (let l = 0; l < this.size; l++) {
             let nn = (position - l) % this.size;
             nn < 0 && (nn = this.size + nn);

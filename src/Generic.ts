@@ -1,3 +1,14 @@
+/*
+  This program and the accompanying materials are
+  made available under the terms of the Eclipse Public License v2.0 which accompanies
+  this distribution, and is available at https://www.eclipse.org/legal/epl-v20.html
+  
+  SPDX-License-Identifier: EPL-2.0
+  
+  Copyright Contributors to the Zowe Project.
+  Copyright Contributors to the Open Mainframe Project's TSTerm Project
+*/
+
 import { CharacterData } from "./chardata.js";
 import { Utils } from "./utils.js";
 
@@ -540,8 +551,9 @@ export class Sounds {
         "data:audio/wav;base64,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\nvjvQ6yKo9ZSS6l//8elePK/Lf//IInrOF/FvDoADYAGBMGb7FtErm5MXMlmPAJQVgWta7Zx2go+8xJ0UiCb8LHHdftWyLJE0QIAIsI+UbXu67dZMjmgDGCGl1H+vpF4NSDckSIkk7Vd+sxEhBQMRU\n8j/12UIRhzSaUdQ+rQU5kGeFxm+hb1oh6pWWmv3uvmReDl0UnvtapVaIzo1jZbf/pD6ElLqSX+rUmOQNpJFa/r+sa4e/pBlAABoAAAAA3CUgShLdGIxsY7AUABPRrgCABdDuQ5GC7DqPQCgbbJUAo\nRSUj+NIEig0YfyWUho1VBBBA//uQZB4ABZx5zfMakeAAAAmwAAAAF5F3P0w9GtAAACfAAAAAwLhMDmAYWMgVEG1U0FIGCBgXBXAtfMH10000EEEEEECUBYln03TTTdNBDZopopYvrTTdNa325mImN\ng3TTPV9q3pmY0xoO6bv3r00y+IDGid/9aaaZTGMuj9mpu9Mpio1dXrr5HERTZSmqU36A3CumzN/9Robv/Xx4v9ijkSRSNLQhAWumap82WRSBUqXStV/YcS+XVLnSS+WLDroqArFkMEsAS+eWmrUzr\nO0oEmE40RlMZ5+ODIkAyKAGUwZ3mVKmcamcJnMW26MRPgUw6j+LkhyHGVGYjSUUKNpuJUQoOIAyDvEyG8S5yfK6dhZc0Tx1KI/gviKL6qvvFs1+bWtaz58uUNnryq6kt5RzOCkPWlVqVX2a/EEBUd\nU1KrXLf40GoiiFXK///qpoiDXrOgqDR38JB0bw7SoL+ZB9o1RCkQjQ2CBYZKd/+VJxZRRZlqSkKiws0WFxUyCwsKiMy7hUVFhIaCrNQsKkTIsLivwKKigsj8XYlwt/WKi2N4d//uQRCSAAjURNIHp\nMZBGYiaQPSYyAAABLAAAAAAAACWAAAAApUF/Mg+0aohSIRobBAsMlO//Kk4soosy1JSFRYWaLC4qZBYWFRGZdwqKiwkNBVmoWFSJkWFxX4FFRQWR+LsS4W/rFRb//////////////////////////\n/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////\n/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////\n/////////////////////////////////////////////////////////////////////////////////////////////VEFHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAU291bmRib3ku\nZGUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMjAwNGh0dHA6Ly93d3cuc291bmRib3kuZGUAAAAAAAAAACU=");
 }
 
-/* Typescript helps the programmer use HTML DOM well by having massive type 
-   declaration for it
+/* 
+   Typescript helps the programmer use HTML DOM well by having massive type 
+   declaration for it.  This is brought in by the TSConfig. 
 
    https://github.com/microsoft/TypeScript/blob/main/lib/lib.dom.d.ts
 */
@@ -753,7 +765,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	let logger = Utils.coreLogger;
 	logger.info("Disconnected terminal with ID=" + this.id);
 	this.Ei = false;  // not set in constructor
-	this.scriptIsRunning = true;   // GURU, this seems wrong, why would a script be running
+	this.scriptIsRunning = true;   // *UNKNOWN*, this seems wrong, why would a script be running
 	this.closeConnection(4e3, "Terminal Closed");
 	this.getRendererOrFail().fullPaint();
     }
@@ -1084,7 +1096,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
     }
     
     Qi(event:KeyboardEvent):void { // (ko.prototype.Qi = function (t) {
-        if (-1 === navigator.appName.indexOf("Safari") && event.getModifierState){ // GURU why safari?
+        if (-1 === navigator.appName.indexOf("Safari") && event.getModifierState){ // *UNKNOWN* why safari?
 	    event.getModifierState("CapsLock") ? (this.Qn |= 0x000100) : (this.Qn &= 0xFFFEFF); // NEEDSWORK .Qn 
 	}
     }
@@ -1104,7 +1116,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	    }
             return true;
         }
-	// Why the hell does Qn not get set to 0 this case, but it does above, GURU
+	// Why the hell does Qn not get set to 0 this case, but it does above, *UNKNOWN*
 	if (2 === typeValuePair.type ||
 	    (8 === typeValuePair.type && typeValuePair.value.length > 1)) {
             var name = typeValuePair.value;
@@ -1231,7 +1243,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	return this.Hn ? t.trim().replace(/\t/g, " ") : t;
     }
     
-    // overridden in model3270 // GURU - two args, never called with more than one argument - hmm
+    // overridden in model3270 // *UNKNOWN* - two args, never called with more than one argument - hmm
     autotype(t:any,l?:any):void{ // (ko.prototype.te = function (t, l) { 
 	Utils.superClassWarning("autoType");
     }
@@ -1305,7 +1317,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 		var e = coords.rows * this.width + coords.columns;
             if ("dblclick" == event.type) {
                 var s,
-                    u = this.keyboardMap.ae; // NEEDSWORK GURU
+                    u = this.keyboardMap.ae; // NEEDSWORK *UNKNOWN*
                 if (u && null != u) {
                     var h = 0;
                     12 & this.Qn && (h |= 2), 3 & this.Qn && (h |= 4), 192 & this.Qn && (h |= 1), 256 == this.Qn ? (h = 1) : 1 == h && 256 & this.Qn && (h = 0), Utils.keyboardLogger.debug("keydown modifier=" + h), 0 === h && (h = 0);
@@ -1377,7 +1389,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 	let eventLogger = Utils.eventLogger;
 	let selectionCanvas = this.selectionCanvas; // was t
         let textArea = this.textAreaOverlay; // was l
-        var n = this.we;   // was n JOE thinks this is dead code, ".we" not defined and n not used, or is it set from outside GURU
+        var n = this.we;   // was n JOE thinks this is dead code, ".we" not defined and n not used, or is it set from outside *UNKNOWN*
         var screen = this; // was i
 	if (selectionCanvas){
 	    selectionCanvas.tabIndex = 0;
@@ -1495,7 +1507,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 		if (!screen.scriptIsRunning){
 		    screen.Kl.fill(null); // NEEDSWORK .Kl
 		    if (compositionData){
-			screen.autotype(compositionData); // GURU note one arg as opposed to prototype
+			screen.autotype(compositionData); // *UNKNOWN* note one arg as opposed to prototype
 			if (textArea){ // I don't know why typescript thinks this can be null
 			    textArea.value = "";
 			    textArea.style.top = "0px";
@@ -1504,7 +1516,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 		    }
 		}
 	    });
-	    // GURU why close the connection only on textArea unload, what about the rest of the world?
+	    // *UNKNOWN* why close the connection only on textArea unload, what about the rest of the world?
 	    textArea.addEventListener("unload", function (event) {
 		screen.closeConnection(4e3, "Terminal Closed"); // JOE - maybe something more specific
 	    });
@@ -1691,7 +1703,7 @@ export class VirtualScreen {  // all terminal types, minified as ko
 		    }
 		} else if (null != screen.Sl && null != screen.yl) { // NEEDSWORK .Sl .yl
 		    let textArea = screen.textAreaOverlay;
-		    // GURU - this code seems crazy inserting a "c"
+		    // *UNKNOWN* - this code seems crazy inserting a "c"
 		    if (textArea){
 			if (0 == textArea.value.length){
 			    textArea.value = "c";
@@ -1974,7 +1986,7 @@ export class BaseRenderer {   // minified as Ea
     };
 
 
-    // GURU where is this called if anywhere
+    // *UNKNOWN* where is this called if anywhere
     // it looks like "t" is a BaseRenderer, or a pile of defaults
     el(t:any){ // Ea.prototype.el = function (t) {
 	let logger = Utils.renderLogger;
@@ -2003,7 +2015,7 @@ export class BaseRenderer {   // minified as Ea
         return { width: textMetrics.width, height: pixelSize };
     }
 
-    static il = 2; // GURU what is this
+    static il = 2; // *UNKNOWN* what is this
     
     al():number{ // Ea.prototype.al = function () {
         return this.screen.oiaEnabled ? this.screen.height + BaseRenderer.il : this.screen.height;
@@ -2097,7 +2109,7 @@ export class BaseRenderer {   // minified as Ea
 	}
         if (this.nl && this.fontFamily != this.nl) {
 	    logger.debug("Determining font size for DBCS=" + this.nl);
-		// GURU, why would r/fontSize  have a value here??
+		// *UNKNOWN*, why would r/fontSize  have a value here??
             var c = this.calculateCharDimensions(ctx, fontSize, this.nl, "M"),  // NEEDSWORK .nl
                 f = this.calculateCharDimensions(ctx, fontSize, this.nl, "䭺");
             logger.debug("SBCS box=" + JSON.stringify(n) +

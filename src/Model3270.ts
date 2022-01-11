@@ -1,3 +1,14 @@
+/*
+  This program and the accompanying materials are
+  made available under the terms of the Eclipse Public License v2.0 which accompanies
+  this distribution, and is available at https://www.eclipse.org/legal/epl-v20.html
+  
+  SPDX-License-Identifier: EPL-2.0
+  
+  Copyright Contributors to the Zowe Project.
+  Copyright Contributors to the Open Mainframe Project's TSTerm Project
+*/
+
 import { Exception,Utils } from "./utils.js";
 import { CharacterAttributes, FieldData, KeyboardMap, RowAndColumn, 
 	 VirtualScreen, OIALine, CharsetInfo, BaseRenderer } from "./generic.js";
@@ -2312,7 +2323,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             t &&
 		(this.Ys = setInterval(() => {
                     this.sendKeepAlive(l);
-		}, 60 * Number(t) * 1e3));// 1e3 == 499 // GURU wtf 
+		}, 60 * Number(t) * 1e3));// 1e3 == 499 // *UNKNOWN* logic/definitions
 	}
     }
 
@@ -2324,7 +2335,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	let n = this.parser;
 	if (1 === t) {
 	    logger.debug("sending telnet keep alive options 241");
-	    n.addTelnetResponse(253, 241); // GURU - this originally said (241) and that seems wrong
+	    n.addTelnetResponse(253, 241); // *UNKNOWN* - this originally said (241) and that seems wrong
 	} else if (2 === t){
 	    logger.debug("sending telnet keep alive options 6");
 	    n.addTelnetResponse(253, 6);
@@ -2633,7 +2644,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
 
-    autotype(t:string, l:number){ // (lc.prototype.te = function (t, l) { // GURU second arg is never passed in
+    autotype(t:string, l:number){ // (lc.prototype.te = function (t, l) { // *UNKNOWN* second arg is never passed in
 	if (this.renderer) {
             var n;
             if (null != this.charsetInfo.kt) {
@@ -3024,7 +3035,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	}
 	var keys = Object.keys(this.fieldDataMap);
 	if (keys.length == 0){
-	    return this.isFieldDataMapCached; // GURU - kind of weird, must be false, I think
+	    return this.isFieldDataMapCached; // *UNKNOWN* - kind of weird, must be false, I think
 	}
 	if (keys.length == 1) {
 	    this.fieldDataMap[keys[0]].length = this.size; // this field owns the whole screen
@@ -3541,7 +3552,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	    }
             return  !0;
 	}
-	if (n) { // GURU, how would this happen?
+	if (n) { // *UNKNOWN*, how would this happen?
 	    this.Su(3)
 	    return false;
 	}
@@ -3784,9 +3795,6 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	this.cacheFieldDataMap();
 	let e = this.getScreenElementByPosition(this.cursorPos);
         let s = e.charToDisplay();
-	/* HERE getFieldData... can return null so a lot of this code
-	   is on shaky ground. 
-	*/
 	if (this.isFormatted) {
             let t = this.getFieldData3270ByPositionNoNull(this.cursorPos, true);
 	    let l = t.position;
@@ -4013,11 +4021,11 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
     
     Nr(){ // lc.prototype.Nr = function () {
-	// GURU - why does this not wrap?? 
+	// *UNKNOWN* - why does this not wrap?? 
 	if (0 != this.cursorPos){
 	    this.modifyCursorPos(-1);
 	}
-	if (this.fu){  // GURU what does this.fu control?
+	if (this.fu){  // *UNKNOWN* what does this.fu control?
 	    this.Cr();
 	}
     }
@@ -4454,7 +4462,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     }
 
     /*
-      GURU why two definitions of jr(t,l) and neither is called??
+      *UNKNOWN* why two definitions of jr(t,l) and neither is called??
     (lc.prototype.jr = function (t, l) {
 	for (var n = this.Rr(t), i = this.dh(n) + n, e = [], s = n; s < i; s++) {
             var u = this.getScreenElementByPosition(n),
@@ -5159,7 +5167,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
                     logger.warn("implement me TN3270E_REPLY_QCODE_MSR_CONTROL " + Utils.hexString(v));
                     break;
 		case QReply.CODE_FIELD_OUTLINING:
-                    if (this.charsetInfo.isDBCS){ // GURU: why just do this for DBCS??
+                    if (this.charsetInfo.isDBCS){ // *UNKNOWN*: why just do this for DBCS??
 			qReply.addCodeReply(QReply.CODE_FIELD_OUTLINING, VirtualScreen3270.bh);
 			w++;
 		    }
@@ -5824,7 +5832,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
             renderingFlags |= 1;
 	    unicodeArray[charIndex] = Renderer3270.graphicEbcdicToUnicode[u];
 	} else if (u === this.St){
-            unicodeArray[charIndex] = Unicode.euro; // GURU Euro, WTF?
+            unicodeArray[charIndex] = Unicode.euro; // *UNKNOWN* Euro, what is this for?
 	} else if (u === Ebcdic.fieldMark || u === Ebcdic.recordMark){
             unicodeArray[charIndex] = Renderer3270.getSpecialSubstitute(u);
 	    if (this.in) {
@@ -5835,7 +5843,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
         } else {
 	    unicodeArray[charIndex] = Renderer3270.getSpecialSubstitute(u);
 	}
-        // GURU does this test mean exact editable field marks have no rendering atributes??
+        // *UNKNOWN* does this test mean exact editable field marks have no rendering atributes??
         if (fieldData && fieldData.isEditable() &&
 	    lineIndex * this.screen.width + charIndex == fieldData.position){
             renderingFlagsArray[charIndex] = 0;
@@ -5941,7 +5949,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
             default:
                 BaseRenderer.drawCharArraySlice(ctx, unicodeLine, lineOffset + h, 1, x, baseY);
             }
-	    // GURU, why is unicode A-Z so special here??
+	    // *UNKNOWN*, why is unicode A-Z so special here??
 	    // there is an underline being drawn!
             if (c >= 65 && c <= 90) {
 		BaseRenderer.drawLine(ctx, x, bottom, x + cWidth, bottom);
@@ -6087,7 +6095,7 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
                         var D,
                             x = screen.Kl[y + 1];
                         null == x && (x = (F as ScreenElement).charToDisplay()), // JOE
-			(D = null != f && f[0] == I && f[1] == x ? Unicode.euro : o[I][x]), // GURU WTF
+			(D = null != f && f[0] == I && f[1] == x ? Unicode.euro : o[I][x]), // *UNKNOWN* logic
 			logger.debug("Should dbcs render b1=0x" + Utils.hexString(I) +
 				     " b2=0x" + Utils.hexString(x) + " unicode=0x" + Utils.hexString(D));
                         var O = [D];

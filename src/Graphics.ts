@@ -1,3 +1,14 @@
+/*
+  This program and the accompanying materials are
+  made available under the terms of the Eclipse Public License v2.0 which accompanies
+  this distribution, and is available at https://www.eclipse.org/legal/epl-v20.html
+  
+  SPDX-License-Identifier: EPL-2.0
+  
+  Copyright Contributors to the Zowe Project.
+  Copyright Contributors to the Open Mainframe Project's TSTerm Project
+*/
+
 import { Utils } from "./utils.js";
 
 /*
@@ -153,27 +164,7 @@ Reply 0x85: CHARACTER_SETS, len=0x29:
 
   What's a 3270 Alphanumeric Partition, and how does it get fed from the host?
 
-  Weds/Thursday
-    Line width and type is confusing?
-    Go to C programs
-    OIA thing
-    Multi-render bug
-    Can it ever generate primitivies like bezier and fillet?
-    C programs to drive GDDM and Load Programmed Symbols
-    Enumerate HLLAPI-like functions
-      Events to insulate keyboard ready or not.
-      Events connection lost
-      Events connection gained
-      GURU input needed
-      // getDimensions
-      // get all fields definitions in order
-      //   FieldFacade
-      //     #private members to hide internals
-      //   
-    OIA Draw bug trace from 
-    Open and use Excel with JS API
-
-    Begin Segment, per AFP
+  Begin Segment, per AFP
 
     0x70
     <headerLength> 1 byte
@@ -187,23 +178,23 @@ Reply 0x85: CHARACTER_SETS, len=0x29:
     30 0a 00 00 00 00 00 00 00 10 00 00 21 06 03 18  is the length of header 0x0A in correspondence with "70 0C"
     00 8f 02 ee 21 06 00 30 00 8f 02 05 
 
-0000   00 05 9a 3c 7a 00 00 11 22 33 44 55 08 00 45 00
-0010   00 fd 43 ce 00 00 3f 06 02 ee ac 1d 7a a4 ac 1d
-0020   61 60 02 6f fa 51 0a 0a a8 5c 52 8a 92 33 50 18
-0030   0f ff c1 ec 00 00 00 01 02 00 31 f3 00 04 03 80
-0040   00 1e 0c 00 00 00 00 3c 00 84 00 00 00 00 00 3c
-0050   00 84 00 00 00 00 00 00 00 00 00 09 00 0d 00 31
-0060   0f 11 00 c0 00 30 0a 00 00 00 00 00 00 00 1e 00  - control here
-0070   00 21 06 03 18 00 8f 02 ee 21 06 00 30 00 8f 02    3 set defaults
-0080   05 21 0c 05 f0 00 8f fd ab 02 54 fe 7a 01 85 00
-0090   2d 0f 10 00 c0 00 70 0c 00 00 00 00 54 00 00 18  - picture here
-00a0   00 00 00 00 c1 04 00 00 00 00 81 04 00 ec 00 00
-00b0   81 04 00 ec 00 9b 81 04 00 00 00 00 00 1b 0f 11
-00c0   00 c0 00 30 0a 00 00 00 00 00 00 00 08 00 00 21  - control here
-00d0   06 03 18 00 8f 00 ee 00 31 40 00 f1 f3 11 01 58    one set default
-00e0   1d f0 11 01 07 29 02 c0 40 46 ff ff d9 c9 c7 c8
-00f0   e3 60 c1 d5 c7 d3 c5 c4 40 e3 d9 c9 c1 d5 c7 d3
-0100   c5 3c 01 58 00 11 00 00 13 ff ef
+  0000   00 05 9a 3c 7a 00 00 11 22 33 44 55 08 00 45 00
+  0010   00 fd 43 ce 00 00 3f 06 02 ee ac 1d 7a a4 ac 1d
+  0020   61 60 02 6f fa 51 0a 0a a8 5c 52 8a 92 33 50 18
+  0030   0f ff c1 ec 00 00 00 01 02 00 31 f3 00 04 03 80
+  0040   00 1e 0c 00 00 00 00 3c 00 84 00 00 00 00 00 3c
+  0050   00 84 00 00 00 00 00 00 00 00 00 09 00 0d 00 31
+  0060   0f 11 00 c0 00 30 0a 00 00 00 00 00 00 00 1e 00  - control here
+  0070   00 21 06 03 18 00 8f 02 ee 21 06 00 30 00 8f 02    3 set defaults
+  0080   05 21 0c 05 f0 00 8f fd ab 02 54 fe 7a 01 85 00
+  0090   2d 0f 10 00 c0 00 70 0c 00 00 00 00 54 00 00 18  - picture here
+  00a0   00 00 00 00 c1 04 00 00 00 00 81 04 00 ec 00 00
+  00b0   81 04 00 ec 00 9b 81 04 00 00 00 00 00 1b 0f 11
+  00c0   00 c0 00 30 0a 00 00 00 00 00 00 00 08 00 00 21  - control here
+  00d0   06 03 18 00 8f 00 ee 00 31 40 00 f1 f3 11 01 58    one set default
+  00e0   1d f0 11 01 07 29 02 c0 40 46 ff ff d9 c9 c7 c8
+  00f0   e3 60 c1 d5 c7 d3 c5 c4 40 e3 d9 c9 c1 d5 c7 d3
+  0100   c5 3c 01 58 00 11 00 00 13 ff ef
 
 
 
@@ -293,24 +284,17 @@ Extended X'FEDD' GRGD Radial Gradien
   XLATE : the origin must be translated to midpoint (active NON-OIA height|width / 2)
   SCALE : y must be inverted scaled by GraphicsHW (from usable area reply) / h|w used for above calculation
 
-  Monday - attempt line primitives and track current point
-         - Irek and merge dynamic thing
+  In TSTERM the create partition and field creation seem to be in sync - ield starts at 264 an goes 80 bytes to 344
+     which matches the REX program and the (132x60) logical screen size.
 
-
-  Why is "RIGHT-ANGLED-TRIANGLE" mis-rendered?
-    Should be on line 2 (0 based), I think.   REXX Program calls ASCPUT in an ASDFLD field at row=3 col1 (1-based)
-    
-    In TSTERM the create partition and field creation seem to be in sync - ield starts at 264 an goes 80 bytes to 344
-    which matches the REX program and the (132x60) logical screen size.
-
-  Worry about similarCharRun.   Does it never find similarity in unminified2.js
+  Worry about similarCharRun.   Does it never find similar char runs??
 
   What effect does CREATE_PARTITION have?
 
   16-bit screen SBA's (256x256) 4 pixels (if monochrome 16 possibilities)  3^3^4->3^12 -> 729 posibilities 
   24-bit color 4 pixels 12 bytes 96 bits of info  2^96 possibilities
 
-  How many symbol sets at once?  
+  How many symbol can we have sets at once?  
 
 
 */
@@ -328,7 +312,7 @@ export class GraphicsConstants {
     static COMMAND_BEGIN_SEGMENT = 0x70;
     
     // orders here
-    // some omissions suggested by OS2 PM doc at
+    // some omissions suggested by OS2 PM doc at (Google it)
     // These docs vary in their OCR errors
     // https://archive.org/stream/OS21.xTechnicalDocumentation/64F0277_OS2_V1_2_PTI_Presentation_Manager_Programming_Reference_Vol_2_djvu.txt
     // https://archive.org/stream/OS22.xTechnicalDocumentation/os2-2.0-pmref-vol3-1992_djvu.txt
