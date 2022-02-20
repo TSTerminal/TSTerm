@@ -19,7 +19,8 @@
 	// "outFile": "module.js",
 	// moduleResolution: Node/Classic
 	"allowSyntheticDefaultImports": true, // because that's the way the Grafana guys wrote their code.  Grrr.
-	"declaration": false,
+	"declaration": true,
+	"declarationDir": "./lib",
 	"target": "ES2019",
 	"lib": [ "ES2019", "DOM" ],
 	"paths": {
