@@ -11,9 +11,9 @@
 
 import { Exception,Utils } from "./Utils";
 import { CharacterAttributes, FieldData, KeyboardMap, RowAndColumn, 
-	 VirtualScreen, OIALine, CharsetInfo, BaseRenderer } from "./Generic.js";
-import { ScreenElement, PagedVirtualScreen, PagedRenderer } from "./Paged.js";
-import { GraphicsState } from "./Graphics.js";
+	 VirtualScreen, OIALine, CharsetInfo, BaseRenderer } from "./Generic";
+import { ScreenElement, PagedVirtualScreen, PagedRenderer } from "./Paged";
+import { GraphicsState } from "./Graphics";
 
 class Ebcdic {
 

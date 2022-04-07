@@ -9,7 +9,7 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { CharacterData } from "./CharData.js";
+import { CharacterData } from "./CharData";
 
 export class ComponentLogger {
     name:string;
