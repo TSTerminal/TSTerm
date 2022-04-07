@@ -2,10 +2,12 @@
   "name": "TSTerm",
   "version": "1.0.0",
   "description": "TSTerm is a software package that provides 3270 terminal functionality in a TypeScript implementation.   A brief explanation of the project can be found at:",
-  "main": "index.js",
+  "main": "./lib/tsterm.js",
+  "types": "./lib/tsterm.d.ts",
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -c -w",
+    "build:dts": "dts-bundle-generator -o ./lib/tsterm.d.ts ./src/publicApi.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,6 +23,7 @@
   "homepage": "https://github.com/TSTerminal/TSTerm#readme",
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.3.0",
+    "dts-bundle-generator": "^6.7.0",
     "rollup": "^2.67.0",
     "rollup-plugin-typescript": "^1.0.1",
     "tslib": "^2.3.1",
