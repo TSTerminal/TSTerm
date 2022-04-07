@@ -9,7 +9,7 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { Utils } from "./utils.js";
+import { Utils } from "./Utils";
 
 /*
   References

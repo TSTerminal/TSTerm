@@ -9,11 +9,11 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { Exception,Utils } from "./utils.js";
+import { Exception,Utils } from "./Utils";
 import { CharacterAttributes, FieldData, KeyboardMap, RowAndColumn, 
-	 VirtualScreen, OIALine, CharsetInfo, BaseRenderer } from "./generic.js";
-import { ScreenElement, PagedVirtualScreen, PagedRenderer } from "./paged.js";
-import { GraphicsState } from "./graphics.js";
+	 VirtualScreen, OIALine, CharsetInfo, BaseRenderer } from "./Generic.js";
+import { ScreenElement, PagedVirtualScreen, PagedRenderer } from "./Paged.js";
+import { GraphicsState } from "./Graphics.js";
 
 class Ebcdic {
 
