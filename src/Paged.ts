@@ -9,8 +9,8 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { Utils } from "./utils.js";
-import { VirtualScreen, TypeValuePair, CharacterAttributes, FieldData, OIALine, CharsetInfo, BaseRenderer } from "./generic.js";
+import { Utils } from "./Utils";
+import { VirtualScreen, TypeValuePair, CharacterAttributes, FieldData, OIALine, CharsetInfo, BaseRenderer } from "./Generic";
 
 export class ScreenElement { // was Io
     position:number;

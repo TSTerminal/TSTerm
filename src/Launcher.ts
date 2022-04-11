@@ -9,9 +9,9 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { Utils } from "./utils.js";
-import { ScreenElement } from "./paged.js";
-import { VirtualScreen3270, DeviceType3270, TN3270EParser } from "./model3270.js";
+import { Utils } from "./Utils";
+import { ScreenElement } from "./Paged";
+import { VirtualScreen3270, DeviceType3270, TN3270EParser } from "./Model3270";
 
 export class TerminalLauncher{
     constructor(){

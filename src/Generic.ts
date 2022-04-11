@@ -9,8 +9,8 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { CharacterData } from "./chardata.js";
-import { Utils } from "./utils.js";
+import { CharacterData } from "./CharData";
+import { Utils } from "./Utils";
 
 export class CharacterAttributes {    // minified as No
     constructor(){
