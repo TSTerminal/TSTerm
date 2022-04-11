@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>    
+    <meta charset="UTF-8">
+    <title>TSTerm_Test Harness</title>
+    <style TYPE="text/css">
+      body {
+	  overflow: hidden; /* Hide scrollbars */
+      }
+    </style>
+    <script type="module">
+      import { TerminalLauncher } from "../lib/tsterm.js";
+      console.log("TSTerm loaded");
+
+      
+      class ResizeWatcher{
+	  constructor(eventCollapseInterval){
+	      // bag all resize events to this interval to not make this a
+	      // performance nightmare
+	      let map = new Map();
+	      let timerID = false;
+	      this.map = map;
+	      window.addEventListener("resize",function(e){
+		  console.log("win resize "+map.size);
+		  if (timerID !== false){
+		      clearTimeout(timerID);
+		  }
+		  timerID = setTimeout(function(){
+		      map.forEach(function(v,k,map){
+			  let element = k;
+			  console.log("dims were "+JSON.stringify(v));
+			  if ((v.w !== element.clientWidth) ||
+			      (v.h !== element.clientHeight)){
+			      v.w = element.clientWidth;
+			      v.h = element.clientHeight;
+			      console.log("dims now "+JSON.stringify(v));
+			      v.callback(element);
+			  }
+		      });
+		      timerID = false;
+		  },eventCollapseInterval);
+	      });
+	  }
+	  
+	  add(element,callback){
+	      this.map.set(element,{ w: element.clientWidth, h: element.clientHeight, callback: callback });
+	  }
+      }
+
+      var canvasParent = null;
+      var virtualScreen = null;
+      
+      var initLayout = function(){
+	  let body = document.getElementById("theBody");
+	  let app = document.getElementById("app");
+	  let control = document.getElementById("controlArea");
+	  let content = document.getElementById("contentArea");
+	  let text1 = document.getElementById("text1");
+	  
+
+	  body.style.margin = "0px 0px";
+	  app.style.width = "100%";
+	  app.style.height = "100%";
+	  app.style.margin = "0px 0px";
+	  control.style.width = "100vw";
+	  control.style.margin = "0px 0px";
+	  control.style.height = "10vh";
+	  content.style.width = "100vw";
+	  content.style.height = "90vh";
+
+	  canvasParent = content;
+
+	  let watcher = new ResizeWatcher(500);
+	  watcher.add(content,function(parentDiv){
+	      console.log("forwarding resize to virtual screen");
+	      virtualScreen.handleContainerResizeFromUI(parentDiv,virtualScreen);
+	  });
+      }
+
+
+      var go = function(isLocal){
+          let port = location.port;
+	  let url = (isLocal ?
+		     "ws://localhost:"+port+"/tn3270" :
+		     "wss://localhost:"+port+"/ZLUX/plugins/org.zowe.terminal.tn3270/services/terminalstream/_current/");
+	  let deviceTypeSelector = document.getElementById("deviceTypes");
+	  let cnxnSettings = { connect: true,
+			       url: url,
+			       host: "172.29.122.164",
+			       port: 623,
+			       security: { type: 0},
+			       alternateWidth: 132,
+			       alternateHeight: 60,
+			       deviceType: Number.parseInt(deviceTypeSelector.value),
+			       enableTN3270E: true };  // 0 for no security
+	      
+	  virtualScreen = TerminalLauncher.start3270( { parentDiv: canvasParent,
+							width: canvasParent.offsetWidth,
+							height: canvasParent.offsetHeight},
+						      cnxnSettings,
+						      null,
+						      {},
+						      null);
+      }
+
+      var renderTest = function(){
+	  
+	  TerminalLauncher.renderTest( { parentDiv: canvasParent,
+					 width: canvasParent.clientWidth,
+					 height: canvasParent.clientHeight });
+      }
+
+      var parseTest = function(){
+	  TerminalLauncher.parseTest( { parentDiv: canvasParent,
+					width: canvasParent.clientWidth,
+					height: canvasParent.clientHeight });
+      }
+
+      window.go = go;
+      window.renderTest = renderTest;
+      window.parseTest = parseTest;
+      window.initLayout = initLayout;
+      
+    </script>
+  </head>
+  <body id="theBody" onload="initLayout()">
+    <div id="app" >
+      <div id="controlArea">
+	<h2>TSTerm Test Page</h2>    
+	<form>
+	  <select name="deviceTypes" id="deviceTypes">
+	    <option value="1">Mod 2</option>
+	    <option value="2">Mod 3</option>
+	    <option value="3">Mod 4</option>
+	    <option value="4">Mod 5</option>
+	    <option value="5" selected>Dynamic</option>
+	  </select>
+	</form>
+	<button onclick="go(false)">Launch through Zowe Proxy</button>
+	<button onclick="go(true)">Launch through tiny Proxy</button>
+	<button onclick="renderTest()">Render Test</button>
+	<button onclick="parseTest()">Parse Test</button>
+      </div>
+      <div id="contentArea">
+      </div>
+    </div>
+  </body>
+</html>
