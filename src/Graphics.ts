@@ -1922,7 +1922,7 @@ export class GraphicsState {
 	} else if (isFirst){
 	    if (this.outstandingFragmentType === constants.OBJECT_NO_TYPE){
 		this.fragments.push(fragment);
-		this.outstandingFragmentType === fragment.objectType;
+		this.outstandingFragmentType = fragment.objectType;
 	    } else {
 		logger.warn("received first GOCA fragment with non-empty fragment list");
 		this.hasError = true;

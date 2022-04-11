@@ -112,7 +112,7 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
 	if (this.sisoAllowed != 0){ 
             t += " SI/SO Allowed";
 	}
-        t + ">"
+        t += ">"
 	return t;
     }
 
