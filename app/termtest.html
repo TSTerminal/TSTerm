@@ -84,6 +84,7 @@
 		     "ws://localhost:"+port+"/tn3270" :
 		     "wss://localhost:"+port+"/ZLUX/plugins/org.zowe.terminal.tn3270/services/terminalstream/_current/");
 	  let deviceTypeSelector = document.getElementById("deviceTypes");
+	  let params = new URLSearchParams(document.location.search.substring(1));
 	  let cnxnSettings = { connect: true,
 			       url: url,
                                host: params.get("address"),
