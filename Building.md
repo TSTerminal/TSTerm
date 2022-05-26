@@ -10,13 +10,14 @@ For most development purposes, there isn't much of a build of this package, per 
 
 The test Proxy Server (which turns 3270 protocol into a WebSocket conversation) can be run using:
 
-`node simpleproxy/main.js <port>`
+`node simpleproxy/main.js *proxyPort*
 
 To run this code you must first npm install in the simpleproxy directory.   This dependencies of this server are on ExpessJS and few other tiny things.
   
 The test proxy server also serves static pages to test in a browser.  Navigate to the following URL in a modern browser:
   
-`http://localhost:<port>/static/app/termtest.html`
+  * http://localhost:*proxyPort*/static/app/termtest.html?address=*host*&port=*port* -or-
+  * http://localhost:*proxyPort*/static/app/termtest.html?address=*host*&port=*port*&useTLS=true  (for TN3270 over TLS)
 
 ## Deployment
 
