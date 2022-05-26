@@ -86,8 +86,8 @@
 	  let deviceTypeSelector = document.getElementById("deviceTypes");
 	  let cnxnSettings = { connect: true,
 			       url: url,
-			       host: "172.29.122.164",
-			       port: 623,
+                               host: params.get("address"),
+                               port: parseInt(params.get("port")),
 			       security: { type: 0},
 			       alternateWidth: 132,
 			       alternateHeight: 60,
