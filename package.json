@@ -7,6 +7,7 @@
   "types": "./lib/tsterm.d.ts",
   "scripts": {
     "build": "rollup -c",
+    "build:omp" : "rollup -c --format iife --name org_omp_tsterm_tn3270",
     "watch": "rollup -c -w",
     "build:dts": "dts-bundle-generator -o ./lib/tsterm.d.ts ./src/publicApi.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
