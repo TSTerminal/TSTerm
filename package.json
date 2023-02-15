@@ -7,8 +7,10 @@
   "types": "./lib/tsterm.d.ts",
   "scripts": {
     "build": "rollup -c",
+    "build:iife" : "rollup -c rollup.config.iife.js",
     "watch": "rollup -c -w",
     "build:dts": "dts-bundle-generator -o ./lib/tsterm.d.ts ./src/publicApi.ts",
+    "build:dts:iife": "dts-bundle-generator -o ./lib/iife/tsterm.d.ts ./src/publicApi.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
