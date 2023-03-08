@@ -11,6 +11,7 @@
 
 import { CharacterData } from "./CharData";
 import { Utils } from "./Utils";
+import { U037 } from "./tables/U00";
 
 export class CharacterAttributes {    // minified as No
     constructor(){
@@ -126,49 +127,44 @@ Note on CGCSGID: (written as two hyphenated 5-char values)
 
 */
 
-export class CharsetInfo {  // minified as kr
-    name:string;
-    font:string; // this.pt
-    isDBCS:boolean; // this.At
-    bt:number[]|null;
-    gt:number[]|null;   
-    Et:any;
-    kt:any;
-    St:number = 0;
-    Tt:any;
+export class CharsetInfo { 
+    name: string;
+    font: string; 
+    isDBCS: boolean; 
+    CGCSGIDBase: number[] | null;
+    CGCSGIDExtended: number[] | null;
+    baseTable: any;
+	unicodeEuro: number = 0;
+    extendedTable: any;
+    fontExtras: any;  // Needs more investigation, only 290/1390 has it
     
-    constructor(name:string,
-		font:string,
-		isDBCS:boolean,
-		i:any ,
-		e:any,
-		s:any,
-		u?:number, // unicode euro considerations
-		h?:any,
-		r?:any) { // h r optional only used in Asian fontscjars
+    constructor(name:string, font:string, isDBCS:boolean, CGCSGIDBase:any, CGCSGIDExtended:any, baseTable:any, unicodeEuro?:number, extendedTable?:any, fontExtras?:any){
         this.name = name;
-	this.font = font; // was this.pt
-	this.isDBCS = isDBCS;  // only true when all the extra stuff is in constructor - was this.At
-	this.bt = i;  // can be an array of 4 numbers or null
-	this.gt = e;  // can be an array of 4 numbers or null
-	this.Et = s;  // Er,B, Wn Er.W Er.k, what is it???
-	if (u){
-	    this.St = u;  // this is the ebcdicCurrencyChar, relative to this charset
-	}
-	this.kt = h;
-	this.Tt = r;
+		this.font = font; 
+		this.isDBCS = isDBCS;
+		this.CGCSGIDBase = CGCSGIDBase;
+		this.CGCSGIDExtended = CGCSGIDExtended;
+		this.baseTable = baseTable;
+		if (unicodeEuro){
+		    this.unicodeEuro = unicodeEuro; 
+		}
+		this.extendedTable = extendedTable;
+		this.fontExtras = fontExtras;
     }
 
     static DEFAULT_FONT_FAMILY:string = "Lucida Console, Monaco, monospace"; // was u at top level
 
     // fill in the rest later
     static TERMINAL_DEFAULT_CHARSETS = [
-	new CharsetInfo("037: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.B),
+
+		new CharsetInfo(U037.encoding + ": " + U037.name, CharsetInfo.DEFAULT_FONT_FAMILY, U037.isDBCS, U037.CGCSGIDBase, U037.CGCSGIDExtended, U037.baseTable, U037.unicodeEuro, U037.extendedTable),
+
+	new CharsetInfo("037: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, U037.baseTable),
 	new CharsetInfo("1047: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Wn),
 	new CharsetInfo("273: German/Austrian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.W),
 	new CharsetInfo("277: Danish/Norwegian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.K),
 	new CharsetInfo("278: Finnish/Swedish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.H),
-	new CharsetInfo("280: Italian", CharsetInfo.DEFAULT_FONT_FAMILY, !1, null, null, CharacterData.Er.Y),
+	new CharsetInfo("280: Italian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Y),
 	new CharsetInfo("284: Spain/Latin America", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.J),
 	new CharsetInfo("290: Japanese Katakana", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.X),
 	new CharsetInfo("297: French", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.tt),
@@ -180,22 +176,14 @@ export class CharsetInfo {  // minified as kr
 	new CharsetInfo("875: Greek", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ut),
 	new CharsetInfo("918: Urdu", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ht),
 	new CharsetInfo("924: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Wn, 159),
-	new CharsetInfo("937: Chinese Traditional", "NSimSun", !0, [4, 151, 0, 37], [3, 167, 3, 67],
-			CharacterData.Er.B, 0, CharacterData.Er.ft, null),
-	new CharsetInfo("935: Chinese Simplified", "NSimSun", !0, [4, 150, 3, 68], [3, 169, 3, 69],
-			CharacterData.Er.Z, 0, CharacterData.Er.vt, null),
-	new CharsetInfo("930: Japanese", "NSimSun", !0, [4, 148, 1, 34], [3, 233, 1, 44],
-			CharacterData.Er.X, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("931: Japanese", "NSimSun", !0, [0, 101, 0, 37], [3, 233, 1, 44],
-			CharacterData.Er.B, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("939: Japanese", "NSimSun", !0, [4, 148, 4, 3], [3, 233, 1, 44],
-			CharacterData.Er.V, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("1390: Japanese", "NSimSun", !0, [255, 255, 33, 34], [255, 255, 65, 44],
-			CharacterData.Er.X, 225, CharacterData.Er.wt, [66, 225]),
-	new CharsetInfo("1399: Japanese", "NSimSun", !0, [255, 255, 20, 3], [255, 255, 65, 44],
-			CharacterData.Er.V, 225, CharacterData.Er.wt, [66, 225]),
-	new CharsetInfo("933: Korean", "NSimSun", !0, [4, 149, 3, 65], [3, 166, 3, 66],
-			CharacterData.Er.G, 0, CharacterData.Er.dt, null),
+	new CharsetInfo("937: Chinese Traditional", "NSimSun", false, [4, 151, 0, 37], [3, 167, 3, 67], U037.baseTable, 0, CharacterData.Er.ft, null),
+	new CharsetInfo("935: Chinese Simplified", "NSimSun", false, [4, 150, 3, 68], [3, 169, 3, 69], CharacterData.Er.Z, 0, CharacterData.Er.vt, null),
+	new CharsetInfo("930: Japanese", "NSimSun", false, [4, 148, 1, 34], [3, 233, 1, 44], CharacterData.Er.X, 0, CharacterData.Er.wt, null),
+	new CharsetInfo("931: Japanese", "NSimSun", false, [0, 101, 0, 37], [3, 233, 1, 44], U037.baseTable, 0, CharacterData.Er.wt, null),
+	new CharsetInfo("939: Japanese", "NSimSun", false, [4, 148, 4, 3], [3, 233, 1, 44],	CharacterData.Er.V, 0, CharacterData.Er.wt, null),
+	new CharsetInfo("1390: Japanese", "NSimSun", false, [255, 255, 33, 34], [255, 255, 65, 44],	CharacterData.Er.X, 225, CharacterData.Er.wt, [66, 225]),
+	new CharsetInfo("1399: Japanese", "NSimSun", false, [255, 255, 20, 3], [255, 255, 65, 44], CharacterData.Er.V, 225, CharacterData.Er.wt, [66, 225]),
+	new CharsetInfo("933: Korean", "NSimSun", false, [4, 149, 3, 65], [3, 166, 3, 66], CharacterData.Er.G, 0, CharacterData.Er.dt, null),
 	new CharsetInfo("1025: Cyrillic(Russian)", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.rt),
 	new CharsetInfo("1026: Turkish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.at),
 	new CharsetInfo("1097: Farsi Bilingual", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ot),
@@ -203,7 +191,7 @@ export class CharsetInfo {  // minified as kr
 	new CharsetInfo("1137: Devanagari", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.L),
 	// 90 is '!', 159 is/was "currency sign" 
 	// 1140 is IBM037 with euro for US 
-	new CharsetInfo("1140: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.B, 159),
+	new CharsetInfo("1140: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, U037.baseTable, 159),
 	// 1141 is IBM273 with euro for Austria/Germany
 	new CharsetInfo("1141: German/Austrian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.W, 159),
 	// 1142 is IBM277 with euro for Denmark/Norway
