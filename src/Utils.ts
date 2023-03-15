@@ -190,14 +190,28 @@ export class Utils {
     }
 
     static base64Encode(t: number[]): string {
-        return this.base64Encoding(t);
+        for (var l = [], n = t.length, i = Math.floor(n / 3), e = n - 3 * i, s = 0, u = 0; u < i; u++) {
+            const n = 255 & t[s++],
+            i = 255 & t[s++];
+            e = 255 & t[s++];
+            l.push(b64EncodeArray[n >> 2]),
+            l.push(b64EncodeArray[((n << 4) & 63) | (i >> 4)]),
+            l.push(b64EncodeArray[((i << 2) & 63) | (e >> 6)]),
+            l.push(b64EncodeArray[63 & e]);
+        }
+        if (0 !== e) {
+            const n = 255 & t[s++];
+            if ((l.push(b64EncodeArray[n >> 2]), 1 === e)) {
+                l.push(b64EncodeArray[(n << 4) & 63]), l.push(61), l.push(61);
+            } else {
+                const i = 255 & t[s++];
+                l.push(b64EncodeArray[((n << 4) & 63) | (i >> 4)]), l.push(b64EncodeArray[(i << 2) & 63]), l.push(61);
+            }
+        }
+        return String.fromCharCode.apply(null, l);
     }
 
     static base64EncodeU8(t: Uint8Array): string {
-        return this.base64Encoding(t);
-    }
-
-    static base64Encoding(t: any): string {
         for (var l = [], n = t.length, i = Math.floor(n / 3), e = n - 3 * i, s = 0, u = 0; u < i; u++) {
             const n = 255 & t[s++],
             i = 255 & t[s++];
