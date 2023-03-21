@@ -92,6 +92,7 @@ export class Exception {
 }
 
 export class Utils {
+
     static defaultGlobalLogger: ComponentLogger;
 
     static keyboardLogger: ComponentLogger = new ComponentLogger('TerminalKeyboard').setLevel(4);
@@ -123,9 +124,9 @@ export class Utils {
     }
 
     static hexDump(byteArray: number[], logger: ComponentLogger, offsetArg?: number, lengthArg?: number): void {
-        let s = 0; // iteration index
-        const offset = offsetArg || 0;  // u
-        const length = lengthArg || byteArray.length; // h
+        let s = 0;
+        const offset = offsetArg || 0;
+        const length = lengthArg || byteArray.length
         let r = '';
         for (s = 0; s < length; s++) {
             r += Utils.hexString(byteArray[offset + s]) + ' ';
@@ -148,9 +149,9 @@ export class Utils {
     }
 
     static hexDumpU8(byteArray: Uint8Array, logger: ComponentLogger, offsetArg?: number, lengthArg?: number): void {
-        let s = 0; // iteration index
-        const offset = offsetArg || 0;  // u
-        const length = lengthArg || byteArray.length; // h
+        let s = 0;
+        const offset = offsetArg || 0;
+        const length = lengthArg || byteArray.length;
         let r = '';
         for (s = 0; s < length; s++) {
             let hexDigits = Utils.hexString(byteArray[offset + s]);
@@ -189,56 +190,50 @@ export class Utils {
         return position >= length ? -1 : byteArray[position];
     }
 
-    static base64Encode(t: number[]): string {
+    static base64Encode(t: number[]): string { // minified as Qh(t)
         for (var l = [], n = t.length, i = Math.floor(n / 3), e = n - 3 * i, s = 0, u = 0; u < i; u++) {
-            const n = 255 & t[s++],
-            i = 255 & t[s++];
-            e = 255 & t[s++];
-            l.push(b64EncodeArray[n >> 2]),
-            l.push(b64EncodeArray[((n << 4) & 63) | (i >> 4)]),
-            l.push(b64EncodeArray[((i << 2) & 63) | (e >> 6)]),
-            l.push(b64EncodeArray[63 & e]);
+            let n = 255 & t[s++],
+                i = 255 & t[s++],
+                e = 255 & t[s++];
+            l.push(b64EncodeArray[n >> 2]), l.push(b64EncodeArray[((n << 4) & 63) | (i >> 4)]), l.push(b64EncodeArray[((i << 2) & 63) | (e >> 6)]), l.push(b64EncodeArray[63 & e]);
         }
         if (0 !== e) {
-            const n = 255 & t[s++];
+            let n = 255 & t[s++];
             if ((l.push(b64EncodeArray[n >> 2]), 1 === e)) {
                 l.push(b64EncodeArray[(n << 4) & 63]), l.push(61), l.push(61);
             } else {
-                const i = 255 & t[s++];
+                let i = 255 & t[s++];
                 l.push(b64EncodeArray[((n << 4) & 63) | (i >> 4)]), l.push(b64EncodeArray[(i << 2) & 63]), l.push(61);
             }
         }
         return String.fromCharCode.apply(null, l);
     }
 
-    static base64EncodeU8(t: Uint8Array): string {
+    static base64EncodeU8(t: Uint8Array): string { // minified as Qh(t)
         for (var l = [], n = t.length, i = Math.floor(n / 3), e = n - 3 * i, s = 0, u = 0; u < i; u++) {
-            const n = 255 & t[s++],
-            i = 255 & t[s++];
-            e = 255 & t[s++];
-            l.push(b64EncodeArray[n >> 2]),
-            l.push(b64EncodeArray[((n << 4) & 63) | (i >> 4)]),
-            l.push(b64EncodeArray[((i << 2) & 63) | (e >> 6)]),
-            l.push(b64EncodeArray[63 & e]);
+            let n = 255 & t[s++],
+                i = 255 & t[s++],
+                e = 255 & t[s++];
+            l.push(b64EncodeArray[n >> 2]), l.push(b64EncodeArray[((n << 4) & 63) | (i >> 4)]), l.push(b64EncodeArray[((i << 2) & 63) | (e >> 6)]), l.push(b64EncodeArray[63 & e]);
         }
         if (0 !== e) {
-            const n = 255 & t[s++];
+            let n = 255 & t[s++];
             if ((l.push(b64EncodeArray[n >> 2]), 1 === e)) {
                 l.push(b64EncodeArray[(n << 4) & 63]), l.push(61), l.push(61);
             } else {
-                const i = 255 & t[s++];
+                let i = 255 & t[s++];
                 l.push(b64EncodeArray[((n << 4) & 63) | (i >> 4)]), l.push(b64EncodeArray[(i << 2) & 63]), l.push(61);
             }
         }
         return String.fromCharCode.apply(null, l);
     }
-
-    /* returns a Uint8Array() */
-    static base64Decode(t: string): Uint8Array | null {
-        const logger = Utils.coreLogger;
-        const n = t.length,
-            i = n / 4;
-        let e = 0,
+    
+        /* returns a Uint8Array() */
+    static base64Decode(t: string): Uint8Array|null {  // Gh = function (t) {
+        let logger = Utils.coreLogger;
+        var n = t.length,
+            i = n / 4,
+            e = 0,
             s = i,
             u = 0,
             h = 0;
@@ -246,31 +241,30 @@ export class Utils {
             logger.warn('Base64 decode failed, encountered 4-mult');
             return null;
         }
-        0 !== n && '=' === t[n - 1] && (e++, s--, '=' === t[n - 2] && e++);
-        let r = 3 * s;
+        0 !== n && '=' === t[n - 1] && (e++, s--, "=" === t[n - 2] && e++);
+        var r = 3 * s;
         0 !== e && (1 === e ? (r += 2) : r++);
-        const a = new Uint8Array(r);
-        const o = 4 * s;
+        var a = new Uint8Array(r);
+        let o = 4 * s;
         for (; u < o; ) {
-            const l = b64DecodeArray[t.charCodeAt(u++)],
+            let l = b64DecodeArray[t.charCodeAt(u++)],
                 n = b64DecodeArray[t.charCodeAt(u++)],
                 i = b64DecodeArray[t.charCodeAt(u++)],
                 e = b64DecodeArray[t.charCodeAt(u++)];
             (a[h++] = (l << 2) | (n >> 4)), (a[h++] = (n << 4) | (i >> 2)), (a[h++] = (i << 6) | e);
         }
         if (0 !== e) {
-            const l = b64DecodeArray[t.charCodeAt(u++)],
+            let l = b64DecodeArray[t.charCodeAt(u++)],
                 n = b64DecodeArray[t.charCodeAt(u++)];
             if (((a[h++] = (l << 2) | (n >> 4)), 1 === e)) {
-                const l = b64DecodeArray[t.charCodeAt(u++)];
+                let l = b64DecodeArray[t.charCodeAt(u++)];
                 a[h++] = (n << 4) | (l >> 2);
             }
         }
         return a;
     }
 
-    // Proper Telnet escaping util
-    static pushTelnetByte(byteArray: number[], b: number): number {
+     static pushTelnetByte(byteArray: number[], b: number): number {
         return 255 === b ? (byteArray.push(255), byteArray.push(255)) : byteArray.push(b), b;
     }
 
