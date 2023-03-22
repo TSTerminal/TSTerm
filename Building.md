@@ -20,11 +20,6 @@ The test proxy server also serves static pages to test in a browser.  Navigate t
   * `http://localhost:*proxyPort*/static/app/termtest.html?address=*host*&port=*port*` -or-
   * `http://localhost:*proxyPort*/static/app/termtest.html?address=*host*&port=*port*&useTLS=true`  (for TN3270 over TLS)
 
-#### Notes
-If you clone this repository under different name, e.g. `tsterm.testing`, you need to change the `static` location in `main.js`:
-- From `app.use('/static', express.static(path.join(__dirname,'../../tsterm')));`
-- To `app.use('/static', express.static(path.join(__dirname,'../../tsterm.testing')));`
-
 ## Deployment
 
 Rollup scripts in the `package.json` for this repo. These will work well if you use the CLI.   However, if you don't:
