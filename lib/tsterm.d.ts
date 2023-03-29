@@ -18,15 +18,14 @@ export declare class CharsetInfo {
 	name: string;
 	font: string;
 	isDBCS: boolean;
-	bt: number[] | null;
-	gt: number[] | null;
-	Et: any;
-	kt: any;
-	St: number;
-	Tt: any;
-	constructor(name: string, font: string, isDBCS: boolean, i: any, e: any, s: any, u?: number, // unicode euro considerations
-	h?: any, r?: any);
+	CGCSGIDBase: number[] | null;
+	CGCSGIDExtended: number[] | null;
+	baseTable: any;
+	unicodeEuro: number;
+	extendedTable: any;
+	unicodeEuroDBCS: any;
 	static DEFAULT_FONT_FAMILY: string;
+	constructor(ccsid: any);
 	static TERMINAL_DEFAULT_CHARSETS: CharsetInfo[];
 	toString(): string;
 }

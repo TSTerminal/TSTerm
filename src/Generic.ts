@@ -9,9 +9,16 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { CharacterData } from "./CharData";
 import { Utils } from "./Utils";
 import { U037 } from "./tables/U00";
+import { U273, U277, U278, U280, U284, U290, U297 } from './tables/U02'
+import { U500 } from './tables/U05';
+import { U420, U424 } from './tables/U04';
+import { U838, U870, U875 } from './tables/U08';
+import { U918, U924, U930, U931, U933, U935, U937, U939 } from './tables/U09'
+import { U1025, U1026, U1047, U1097 } from './tables/U10';
+import { U1112, U1137, U1140, U1141, U1142, U1143, U1144, U1145, U1147, U1148, U1153 } from './tables/U11';
+import { U1390, U1399 } from './tables/U13';
 
 export class CharacterAttributes {    // minified as No
     constructor(){
@@ -136,78 +143,73 @@ export class CharsetInfo {
     baseTable: any;
 	unicodeEuro: number = 0;
     extendedTable: any;
-    fontExtras: any;  // Needs more investigation, only 290/1390 has it
+    unicodeEuroDBCS: any;
     
-    constructor(name:string, font:string, isDBCS:boolean, CGCSGIDBase:any, CGCSGIDExtended:any, baseTable:any, unicodeEuro?:number, extendedTable?:any, fontExtras?:any){
-        this.name = name;
-		this.font = font; 
-		this.isDBCS = isDBCS;
-		this.CGCSGIDBase = CGCSGIDBase;
-		this.CGCSGIDExtended = CGCSGIDExtended;
-		this.baseTable = baseTable;
-		if (unicodeEuro){
-		    this.unicodeEuro = unicodeEuro; 
+    static DEFAULT_FONT_FAMILY:string = "Lucida Console, Monaco, monospace";
+
+    constructor(ccsid: any){
+        this.name = ccsid.encoding + ': ' + ccsid.name;
+		if (ccsid.font) {
+			this.font = ccsid.font; 
+		} else {
+			this.font = CharsetInfo.DEFAULT_FONT_FAMILY;
 		}
-		this.extendedTable = extendedTable;
-		this.fontExtras = fontExtras;
+		this.isDBCS = ccsid.isDBCS;
+		this.CGCSGIDBase = ccsid.CGCSGIDBase;
+		this.CGCSGIDExtended = ccsid.CGCSGIDExtended;
+		this.baseTable = ccsid.baseTable;
+		if (ccsid.unicodeEuro){
+		    this.unicodeEuro = ccsid.unicodeEuro; 
+		}
+		this.extendedTable = ccsid.extendedTable;
+		this.unicodeEuroDBCS = ccsid.unicodeEuroDBCS;
     }
 
-    static DEFAULT_FONT_FAMILY:string = "Lucida Console, Monaco, monospace"; // was u at top level
-
-    // fill in the rest later
-    static TERMINAL_DEFAULT_CHARSETS = [
-
-		new CharsetInfo(U037.encoding + ": " + U037.name, CharsetInfo.DEFAULT_FONT_FAMILY, U037.isDBCS, U037.CGCSGIDBase, U037.CGCSGIDExtended, U037.baseTable, U037.unicodeEuro, U037.extendedTable),
-
-	new CharsetInfo("037: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, U037.baseTable),
-	new CharsetInfo("1047: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Wn),
-	new CharsetInfo("273: German/Austrian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.W),
-	new CharsetInfo("277: Danish/Norwegian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.K),
-	new CharsetInfo("278: Finnish/Swedish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.H),
-	new CharsetInfo("280: Italian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Y),
-	new CharsetInfo("284: Spain/Latin America", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.J),
-	new CharsetInfo("290: Japanese Katakana", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.X),
-	new CharsetInfo("297: French", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.tt),
-	new CharsetInfo("420: Arabic (type 4)", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.lt),
-	new CharsetInfo("424: Hebrew", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.nt),
-	new CharsetInfo("500: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.it),
-	new CharsetInfo("838: Thai ", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.et),
-	new CharsetInfo("870: Croat/Czech/Polish/Serbian/Slovak ", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.st),
-	new CharsetInfo("875: Greek", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ut),
-	new CharsetInfo("918: Urdu", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ht),
-	new CharsetInfo("924: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Wn, 159),
-	new CharsetInfo("937: Chinese Traditional", "NSimSun", true, [4, 151, 0, 37], [3, 167, 3, 67], U037.baseTable, 0, CharacterData.Er.ft, null),
-	new CharsetInfo("935: Chinese Simplified", "NSimSun", true, [4, 150, 3, 68], [3, 169, 3, 69], CharacterData.Er.Z, 0, CharacterData.Er.vt, null),
-	new CharsetInfo("930: Japanese", "NSimSun", true, [4, 148, 1, 34], [3, 233, 1, 44], CharacterData.Er.X, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("931: Japanese", "NSimSun", true, [0, 101, 0, 37], [3, 233, 1, 44], U037.baseTable, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("939: Japanese", "NSimSun", true, [4, 148, 4, 3], [3, 233, 1, 44],	CharacterData.Er.V, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("1390: Japanese", "NSimSun", true, [255, 255, 33, 34], [255, 255, 65, 44],	CharacterData.Er.X, 225, CharacterData.Er.wt, [66, 225]),
-	new CharsetInfo("1399: Japanese", "NSimSun", true, [255, 255, 20, 3], [255, 255, 65, 44], CharacterData.Er.V, 225, CharacterData.Er.wt, [66, 225]),
-	new CharsetInfo("933: Korean", "NSimSun", true, [4, 149, 3, 65], [3, 166, 3, 66], CharacterData.Er.G, 0, CharacterData.Er.dt, null),
-	new CharsetInfo("1025: Cyrillic(Russian)", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.rt),
-	new CharsetInfo("1026: Turkish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.at),
-	new CharsetInfo("1097: Farsi Bilingual", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ot),
-	new CharsetInfo("1112: Baltic Multilingual", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ct),
-	new CharsetInfo("1137: Devanagari", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.L),
-	// 90 is '!', 159 is/was "currency sign" 
-	// 1140 is IBM037 with euro for US 
-	new CharsetInfo("1140: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, U037.baseTable, 159),
-	// 1141 is IBM273 with euro for Austria/Germany
-	new CharsetInfo("1141: German/Austrian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.W, 159),
-	// 1142 is IBM277 with euro for Denmark/Norway
-	new CharsetInfo("1142: Danish/Norwegian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.K, 90),
-	// 1143 is IBM278 with euro for Finland/Sweden
-	new CharsetInfo("1143: Finnish/Swedish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.H, 90),
-	// 1144 is IBM280 with euro for Italy
-	new CharsetInfo("1144: Italian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Y, 159),
-	// 1145 is IBM284 with euro for Spain
-	new CharsetInfo("1145: Spain/Latin America", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.J, 159),
-	new CharsetInfo("1147: French", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.tt, 159),
-	new CharsetInfo("1148: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.it, 159),
-	new CharsetInfo("1153: Croat/Czech/Polish/Serbian/Slovak", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.st, 159)];
+	static TERMINAL_DEFAULT_CHARSETS = [
+		new CharsetInfo(U037),   // 037: International
+		new CharsetInfo(U1047),  // 1047: International
+		new CharsetInfo(U273),   // 273: German/Austrian
+		new CharsetInfo(U277),   // 277: Danish/Norwegian
+		new CharsetInfo(U278),   // 278: Finnish/Swedish
+		new CharsetInfo(U280),   // 280: Italian
+		new CharsetInfo(U284),   // 284: Spain/Latin America
+		new CharsetInfo(U290),   // 290: Japanese Katakana
+		new CharsetInfo(U297),   // 297: French
+		new CharsetInfo(U420),   // 420: Arabic (type 4)
+		new CharsetInfo(U424),   // 424: Hebrew
+		new CharsetInfo(U500),   // 500: International
+		new CharsetInfo(U838),   // 838: Thai
+		new CharsetInfo(U870),   // 870: Croat/Czech/Polish/Serbian/Slovak
+		new CharsetInfo(U875),   // 875: Greek
+		new CharsetInfo(U918),   // 918: Urdu
+		new CharsetInfo(U924),   // 924: International
+		new CharsetInfo(U937),   // 937: Chinese Traditional
+		new CharsetInfo(U935),   // 935: Chinese Simplified
+		new CharsetInfo(U930),   // 930: Japanese
+		new CharsetInfo(U931),   // 931: Japanese
+		new CharsetInfo(U939),   // 939: Japanese
+		new CharsetInfo(U1390),  // 1390: Japanese
+		new CharsetInfo(U1399),  // 1399: Japanese
+		new CharsetInfo(U933),   // 933: Korean
+		new CharsetInfo(U1025),  // 1025: Cyrillic(Russian)
+		new CharsetInfo(U1026),  // 1026: Turkish
+		new CharsetInfo(U1097),  // 1097: Farsi Bilingual
+		new CharsetInfo(U1112),  // 1112: Baltic Multilingual
+		new CharsetInfo(U1137),  // 1137: Devanagari
+		new CharsetInfo(U1140),  // 1140: International
+		new CharsetInfo(U1141),  // 1141: German/Austrian
+		new CharsetInfo(U1142),  // 1142: Danish/Norwegian
+		new CharsetInfo(U1143),  // 1143: Finnish/Swedish
+		new CharsetInfo(U1144),  // 1144: Italian
+		new CharsetInfo(U1145),  // 1145: Spain/Latin America
+		new CharsetInfo(U1147),  // 1147: French
+		new CharsetInfo(U1148),  // 1148: International
+		new CharsetInfo(U1153)   // 1153: Croat/Czech/Polish/Serbian/Slovak
+		
+	];
     
-    toString():string{
-	return "<CharsetInfo " + this.name + " font=" + this.font + ">";
+    toString(): string {
+		return "<CharsetInfo " + this.name + " font=" + this.font + ">";
     }
 }
 

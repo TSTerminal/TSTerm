@@ -9,8 +9,6 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { CharacterData } from "./CharData";
-
 export class ComponentLogger {
     name:string;
     level:number;

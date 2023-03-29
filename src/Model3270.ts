@@ -2307,7 +2307,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     showScreen(){ // (lc.prototype.Ge = function () {
 	if (this.renderer == null){
 	    Utils.coreLogger.debug("showScreen");
-	    this.renderer = new Renderer3270(this, this.charsetInfo.Et);
+	    this.renderer = new Renderer3270(this, this.charsetInfo.baseTable);
 	    if (null !== this.zn && void 0 !== this.zn){
 		this.Ui(this.zn); // INTERIM .Ui
 	    }
@@ -2611,12 +2611,12 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 			if (1 == a[E]) {
                             var k = this.screenElements[E + 1],
                             S = k ? k.charToDisplay() : 0; // JOE bold, but strongly-typed, defaulting!
-                            (b = null != charsetInfo.Tt && charsetInfo.Tt[0] == b && charsetInfo.Tt[1] == S ? Unicode.euro : charsetInfo.kt[b][S]),
+                            (b = null != charsetInfo.unicodeEuroDBCS && charsetInfo.unicodeEuroDBCS[0] == b && charsetInfo.unicodeEuroDBCS[1] == S ? Unicode.euro : charsetInfo.extendedTable[b][S]),
 			    p++;
 			} else if (2 == a[E]) {
                             var T = this.screenElements[E - 1],
                             R = T ? T.charToDisplay() : 0; // JOE bold, but strongly-typed, defaulting!
-                            b = null != charsetInfo.Tt && charsetInfo.Tt[0] == R && charsetInfo.Tt[1] == b ? Unicode.euro : charsetInfo.kt[R][b];
+                            b = null != charsetInfo.unicodeEuroDBCS && charsetInfo.unicodeEuroDBCS[0] == R && charsetInfo.unicodeEuroDBCS[1] == b ? Unicode.euro : charsetInfo.extendedTable[R][b];
 			} else if (g.isGraphic)
                             if (u)
                             switch ((b = Renderer3270.graphicEbcdicToUnicode[b])) {
@@ -2647,7 +2647,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     autotype(t:string, l:number){ // (lc.prototype.te = function (t, l) { // *UNKNOWN* second arg is never passed in
 	if (this.renderer) {
             var n;
-            if (null != this.charsetInfo.kt) {
+            if (null != this.charsetInfo.extendedTable) {
 		var i = this.je() == this.cursorPos;  // NEEDSWORK .je
 		n = this.Ve(t, i, !0);
             } else {
@@ -5006,8 +5006,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
      */
     
     buildDBCSCharacterSetReply():Uint8Array{ // (lc.prototype.Ch = function () {
-	let charsetID1 = this.charsetInfo.bt;
-	let charsetID2 = this.charsetInfo.gt;
+	let charsetID1 = this.charsetInfo.CGCSGIDBase;
+	let charsetID2 = this.charsetInfo.CGCSGIDExtended;
 	if (!charsetID1 || !charsetID2){
 	    throw "Illegal State: must have charset ID's for DBCS charset reply";
 	}
@@ -6011,9 +6011,9 @@ class Renderer3270 extends PagedRenderer {  // Minified as Ya
         let colorArray:number[] = new Array(logicalWidth); // was h
         let renderingFlagsArray:number[] = new Array(logicalWidth); // was r
         let dbcsArray:Uint8Array = Renderer3270.buildDBCSArray(screen);  // was a
-        let o = screen.charsetInfo.isDBCS ? screen.charsetInfo.kt : screen.charsetInfo.Et;
+        let o = screen.charsetInfo.isDBCS ? screen.charsetInfo.extendedTable : screen.charsetInfo.baseTable;
         let charsetFont = screen.charsetInfo.font; // was c
-        let f = screen.charsetInfo.Tt;
+        let f = screen.charsetInfo.unicodeEuroDBCS;
         f || (f = null); // make falsish null;
         var v = 0,               // no great name yet
             bufferPosOfLine = 0; // screenElement array offset, was p
