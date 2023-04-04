@@ -25,7 +25,8 @@ jobs:
         if: ${{ inputs.RUN_ID == '' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh run download $(gh run list -w "Build tsterm" --json databaseId -q .[0].databaseId)
+        # download default by filtering for the latest successful build output by the main branch
+        run: gh run download $(gh run list -w "Build tsterm" --json databaseId,headBranch,conclusion -q 'map(select(.headBranch == "main")) | map(select(.conclusion == "success")) | .[0].databaseId')
       - name: '[Download] Input'
         if: ${{ inputs.RUN_ID }}
         env:
