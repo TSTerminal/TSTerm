@@ -1,7 +1,7 @@
-name: Release draft
+name: Release tsterm draft
 on:
   workflow_run:
-    workflows: ["Run Tests"]
+    workflows: ["Build tsterm"]
     branches: [main]
     types: 
       - completed
@@ -24,11 +24,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: '[Setup] env'
+      - name: '[Setup] default env'
         if: ${{ inputs.BUMP_TYPE == '' && inputs.RELEASE_TAG == '' }}
         run: |
           echo "BUMP_TYPE=minor" >> $GITHUB_ENV
-      - name: '[Setup] env'
+      - name: '[Setup] input env'
         if: ${{ inputs.BUMP_TYPE }}
         run: |
           echo "BUMP_TYPE=${{ inputs.BUMP_TYPE }}" >> $GITHUB_ENV
