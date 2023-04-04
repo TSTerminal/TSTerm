@@ -47,4 +47,4 @@ jobs:
           prerelease: false
           token: ${{ github.token }}
           #body_path: CHANGELOG.md
-          files: tsterm/*
+          files: tsterm/**
