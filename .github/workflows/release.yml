@@ -15,7 +15,7 @@ on:
         required: false
       RUN_ID:
         description: 'Specify run id of asset to associate with release.'
-        reqiured: true
+        required: true
 
 permissions:
   contents: write
