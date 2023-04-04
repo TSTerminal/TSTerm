@@ -32,7 +32,7 @@ jobs:
           draft: true
           prerelease: false
           #body_path: CHANGELOG.md
-#          token: ${{ secrets.RUNT }}
+          token: ${{ secrets.RUNT }}
           files: tsterm/*
 #      - name: '[Create release]'
 #        id: create_release
