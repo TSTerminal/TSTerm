@@ -1,5 +1,10 @@
-name: Release draft tsterm
+name: Release draft
 on:
+  workflow_run:
+    workflows: ["Run Tests"]
+    branches: [main]
+    types: 
+      - completed
   workflow_dispatch:
     inputs:
       BUMP_TYPE:
@@ -9,8 +14,8 @@ on:
         description: 'Disable bumping by specifying a semver pattern (without v). Need this xor BUMP_TYPE'
         required: false
       RUN_ID:
-        description: 'Specify run id of asset to associate with release. When missing, gets last run.'
-        reqiured: false
+        description: 'Specify run id of asset to associate with release.'
+        reqiured: true
 
 permissions:
   contents: write
@@ -19,6 +24,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: '[Setup] env'
+        if: ${{ inputs.BUMP_TYPE == '' && inputs.RELEASE_TAG == '' }}
+        run: |
+          echo "BUMP_TYPE=minor" >> $GITHUB_ENV
+      - name: '[Setup] env'
+        if: ${{ inputs.BUMP_TYPE }}
+        run: |
+          echo "BUMP_TYPE=${{ inputs.BUMP_TYPE }}" >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v3
       - name: '[Download] Default'
@@ -39,7 +52,7 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ github.token }}
-          default_bump: ${{ inputs.BUMP_TYPE }}
+          default_bump: ${{ env.BUMP_TYPE }}
           custom_tag: ${{ inputs.RELEASE_NUMBER }}
       - name: '[Create release]'
         uses: softprops/action-gh-release@v1
