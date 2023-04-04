@@ -3,13 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       BUMP_TYPE:
-        description: 'When version bumping, set patch, minor, or major'
+        description: 'When version bumping, set patch, minor, or major. Need this xor RELEASE_TAG.'
         required: false
-      RELEASE_NUMBER:
-        description: 'Disable bumping by specifying a semver pattern (without v).'
+      RELEASE_TAG:
+        description: 'Disable bumping by specifying a semver pattern (without v). Need this xor BUMP_TYPE'
         required: false
       RUN_ID:
-        description: 'Specify run id of asset to associate with release.'
+        description: 'Specify run id of asset to associate with release. When missing, gets last run.'
         reqiured: false
 
 permissions:
@@ -31,6 +31,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh run download ${{ inputs.RUN_ID }}
+      - name: '[Archive] zip download'
+        run: zip -r tsterm.zip tsterm
       - name: '[Create tag]'
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.1
@@ -47,4 +49,4 @@ jobs:
           prerelease: false
           token: ${{ github.token }}
           #body_path: CHANGELOG.md
-          files: tsterm/**
+          files: tsterm.zip
