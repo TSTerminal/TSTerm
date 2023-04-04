@@ -1,0 +1,55 @@
+name: Build tsterm
+on:
+  push:
+    branches:
+      - staging
+      - rc
+      - main
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+  workflow_dispatch:
+    inputs:
+      BRANCH_NAME:
+        description: 'Specify branch name or PR (e.g. PR-41)'
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: '[Prep 1] Checkout'
+        uses: actions/checkout@v2
+
+      - name: '[Prep 2] Cache node modules'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.npm
+            ~/.nvm/.cache
+            ~/.nvm/versions
+          key: ${{ runner.os }}-build-cache-node-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-cache-node-modules-
+      - name: '[Prep 3] Setup Node'
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - name: '[Install] Install'
+        run: npm ci
+      - name: '[Build] standard'
+        run: npm run build
+      - name: '[Build] iife'
+        run: npm run build:iife
+      - name: '[Build] dts'
+        run: npm run build:dts
+      - name: '[Build] dts iife'
+        run: npm run build:dts:iife
+      - name: '[Test]'
+        run: npm run test
+      - name: '[Upload]'
+        uses: actions/upload-artifact@v3
+        with:
+          name: tsterm
+          path: lib/
+          if-no-files-found: error
