@@ -159,8 +159,8 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 	}
 	if (this.renderer){
 	    let pagedRenderer:PagedRenderer = this.renderer as PagedRenderer;
-	    pagedRenderer.unicodeTable = this.charsetInfo.Et; // NEEDSWORK  - these are unicode/font mapping things
-	    pagedRenderer.St = this.charsetInfo.St; // NEEDSWORK  - ditto - and no panic for now
+	    pagedRenderer.unicodeTable = this.charsetInfo.baseTable; // NEEDSWORK  - these are unicode/font mapping things
+	    pagedRenderer.St = this.charsetInfo.unicodeEuro; // NEEDSWORK  - ditto - and no panic for now
 	    pagedRenderer.fullPaint();
 	}
 	Utils.coreLogger.debug("charset info set to " + this.charsetInfo.name + " font=" + this.charsetInfo.font);
@@ -173,11 +173,11 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
     static unicodeEuro:number = 0x20AC; // 8364
 
     Ql(t:number){ // (Oo.prototype.Ql = function (t) {
-	if (8364 == t && this.charsetInfo.St > 0) {
-	    return this.charsetInfo.St;
+	if (8364 == t && this.charsetInfo.unicodeEuro > 0) {
+	    return this.charsetInfo.unicodeEuro;
 	}
-	for (var l = this.charsetInfo.Et, n = 0; n < l.length; n++) if (l[n] === t) return n;
-	var i = this.charsetInfo.kt;
+	for (var l = this.charsetInfo.baseTable, n = 0; n < l.length; n++) if (l[n] === t) return n;
+	var i = this.charsetInfo.extendedTable;
 	if (null != i){
 	    for (var e = 0; e < i.length; e++)
 		if (null != i[e])
@@ -308,7 +308,7 @@ export class PagedVirtualScreen extends VirtualScreen {  // 3270, 5250, and mayb
 		let l = "";
 		this._e.forEach((t) => { l += t;}); 
 		let n = parseInt(l, 16).toString(10); // hexadecimal parsing to decimal string
-		t = this.charsetInfo.Et[n]; // NEEDSWORK .Et
+		t = this.charsetInfo.baseTable[n]; // NEEDSWORK .Et
 		this.We = !1; // NEEDSWORK .We
 		this._e = [];
             }
