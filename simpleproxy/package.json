@@ -4,7 +4,8 @@
   "description": "Proxy for 3270",
   "main": "main.js",
   "scripts": {
-    "test": ""
+    "test": "",
+    "start": "node main.js 8000"
   },
   "repository": {
     "type": "git",
