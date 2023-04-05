@@ -1,6 +1,6 @@
 {
   "name": "TSTerm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "TSTerm is a software package that provides 3270 terminal functionality in a TypeScript implementation.   A brief explanation of the project can be found at:",
   "main": "./lib/tsterm.min.js",
   "type": "module", 
@@ -11,7 +11,8 @@
     "watch": "rollup -c -w",
     "build:dts": "dts-bundle-generator -o ./lib/tsterm.d.ts ./src/publicApi.ts",
     "build:dts:iife": "dts-bundle-generator -o ./lib/iife/tsterm.d.ts ./src/publicApi.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:all": "npm run build && npm run build:iife && npm run build:dts && npm run build:dts:iife"
   },
   "repository": {
     "type": "git",
