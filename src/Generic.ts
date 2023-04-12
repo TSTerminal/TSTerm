@@ -9,8 +9,16 @@
   Copyright Contributors to the Open Mainframe Project's TSTerm Project
 */
 
-import { CharacterData } from "./CharData";
 import { Utils } from "./Utils";
+import { U037 } from "./tables/U00";
+import { U273, U277, U278, U280, U284, U290, U297 } from './tables/U02'
+import { U500 } from './tables/U05';
+import { U420, U424 } from './tables/U04';
+import { U838, U870, U875 } from './tables/U08';
+import { U918, U924, U930, U931, U933, U935, U937, U939 } from './tables/U09'
+import { U1025, U1026, U1047, U1097 } from './tables/U10';
+import { U1112, U1137, U1140, U1141, U1142, U1143, U1144, U1145, U1147, U1148, U1153 } from './tables/U11';
+import { U1390, U1399 } from './tables/U13';
 
 export class CharacterAttributes {    // minified as No
     constructor(){
@@ -126,100 +134,82 @@ Note on CGCSGID: (written as two hyphenated 5-char values)
 
 */
 
-export class CharsetInfo {  // minified as kr
-    name:string;
-    font:string; // this.pt
-    isDBCS:boolean; // this.At
-    bt:number[]|null;
-    gt:number[]|null;   
-    Et:any;
-    kt:any;
-    St:number = 0;
-    Tt:any;
+export class CharsetInfo { 
+    name: string;
+    font: string; 
+    isDBCS: boolean; 
+    CGCSGIDBase: number[] | null;
+    CGCSGIDExtended: number[] | null;
+    baseTable: any;
+	unicodeEuro: number = 0;
+    extendedTable: any;
+    unicodeEuroDBCS: any;
     
-    constructor(name:string,
-		font:string,
-		isDBCS:boolean,
-		i:any ,
-		e:any,
-		s:any,
-		u?:number, // unicode euro considerations
-		h?:any,
-		r?:any) { // h r optional only used in Asian fontscjars
-        this.name = name;
-	this.font = font; // was this.pt
-	this.isDBCS = isDBCS;  // only true when all the extra stuff is in constructor - was this.At
-	this.bt = i;  // can be an array of 4 numbers or null
-	this.gt = e;  // can be an array of 4 numbers or null
-	this.Et = s;  // Er,B, Wn Er.W Er.k, what is it???
-	if (u){
-	    this.St = u;  // this is the ebcdicCurrencyChar, relative to this charset
-	}
-	this.kt = h;
-	this.Tt = r;
+    static DEFAULT_FONT_FAMILY:string = "Lucida Console, Monaco, monospace";
+
+    constructor(ccsid: any){
+        this.name = ccsid.encoding + ': ' + ccsid.name;
+		if (ccsid.font) {
+			this.font = ccsid.font; 
+		} else {
+			this.font = CharsetInfo.DEFAULT_FONT_FAMILY;
+		}
+		this.isDBCS = ccsid.isDBCS;
+		this.CGCSGIDBase = ccsid.CGCSGIDBase;
+		this.CGCSGIDExtended = ccsid.CGCSGIDExtended;
+		this.baseTable = ccsid.baseTable;
+		if (ccsid.unicodeEuro){
+		    this.unicodeEuro = ccsid.unicodeEuro; 
+		}
+		this.extendedTable = ccsid.extendedTable;
+		this.unicodeEuroDBCS = ccsid.unicodeEuroDBCS;
     }
 
-    static DEFAULT_FONT_FAMILY:string = "Lucida Console, Monaco, monospace"; // was u at top level
-
-    // fill in the rest later
-    static TERMINAL_DEFAULT_CHARSETS = [
-	new CharsetInfo("037: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.B),
-	new CharsetInfo("1047: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Wn),
-	new CharsetInfo("273: German/Austrian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.W),
-	new CharsetInfo("277: Danish/Norwegian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.K),
-	new CharsetInfo("278: Finnish/Swedish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.H),
-	new CharsetInfo("280: Italian", CharsetInfo.DEFAULT_FONT_FAMILY, !1, null, null, CharacterData.Er.Y),
-	new CharsetInfo("284: Spain/Latin America", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.J),
-	new CharsetInfo("290: Japanese Katakana", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.X),
-	new CharsetInfo("297: French", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.tt),
-	new CharsetInfo("420: Arabic (type 4)", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.lt),
-	new CharsetInfo("424: Hebrew", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.nt),
-	new CharsetInfo("500: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.it),
-	new CharsetInfo("838: Thai ", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.et),
-	new CharsetInfo("870: Croat/Czech/Polish/Serbian/Slovak ", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.st),
-	new CharsetInfo("875: Greek", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ut),
-	new CharsetInfo("918: Urdu", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ht),
-	new CharsetInfo("924: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Wn, 159),
-	new CharsetInfo("937: Chinese Traditional", "NSimSun", !0, [4, 151, 0, 37], [3, 167, 3, 67],
-			CharacterData.Er.B, 0, CharacterData.Er.ft, null),
-	new CharsetInfo("935: Chinese Simplified", "NSimSun", !0, [4, 150, 3, 68], [3, 169, 3, 69],
-			CharacterData.Er.Z, 0, CharacterData.Er.vt, null),
-	new CharsetInfo("930: Japanese", "NSimSun", !0, [4, 148, 1, 34], [3, 233, 1, 44],
-			CharacterData.Er.X, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("931: Japanese", "NSimSun", !0, [0, 101, 0, 37], [3, 233, 1, 44],
-			CharacterData.Er.B, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("939: Japanese", "NSimSun", !0, [4, 148, 4, 3], [3, 233, 1, 44],
-			CharacterData.Er.V, 0, CharacterData.Er.wt, null),
-	new CharsetInfo("1390: Japanese", "NSimSun", !0, [255, 255, 33, 34], [255, 255, 65, 44],
-			CharacterData.Er.X, 225, CharacterData.Er.wt, [66, 225]),
-	new CharsetInfo("1399: Japanese", "NSimSun", !0, [255, 255, 20, 3], [255, 255, 65, 44],
-			CharacterData.Er.V, 225, CharacterData.Er.wt, [66, 225]),
-	new CharsetInfo("933: Korean", "NSimSun", !0, [4, 149, 3, 65], [3, 166, 3, 66],
-			CharacterData.Er.G, 0, CharacterData.Er.dt, null),
-	new CharsetInfo("1025: Cyrillic(Russian)", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.rt),
-	new CharsetInfo("1026: Turkish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.at),
-	new CharsetInfo("1097: Farsi Bilingual", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ot),
-	new CharsetInfo("1112: Baltic Multilingual", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.ct),
-	new CharsetInfo("1137: Devanagari", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.L),
-	// 90 is '!', 159 is/was "currency sign" 
-	// 1140 is IBM037 with euro for US 
-	new CharsetInfo("1140: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.B, 159),
-	// 1141 is IBM273 with euro for Austria/Germany
-	new CharsetInfo("1141: German/Austrian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.W, 159),
-	// 1142 is IBM277 with euro for Denmark/Norway
-	new CharsetInfo("1142: Danish/Norwegian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.K, 90),
-	// 1143 is IBM278 with euro for Finland/Sweden
-	new CharsetInfo("1143: Finnish/Swedish", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.H, 90),
-	// 1144 is IBM280 with euro for Italy
-	new CharsetInfo("1144: Italian", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.Y, 159),
-	// 1145 is IBM284 with euro for Spain
-	new CharsetInfo("1145: Spain/Latin America", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.J, 159),
-	new CharsetInfo("1147: French", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.tt, 159),
-	new CharsetInfo("1148: International", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.it, 159),
-	new CharsetInfo("1153: Croat/Czech/Polish/Serbian/Slovak", CharsetInfo.DEFAULT_FONT_FAMILY, false, null, null, CharacterData.Er.st, 159)];
+	static TERMINAL_DEFAULT_CHARSETS = [
+		new CharsetInfo(U037),   // 037: International
+		new CharsetInfo(U1047),  // 1047: International
+		new CharsetInfo(U273),   // 273: German/Austrian
+		new CharsetInfo(U277),   // 277: Danish/Norwegian
+		new CharsetInfo(U278),   // 278: Finnish/Swedish
+		new CharsetInfo(U280),   // 280: Italian
+		new CharsetInfo(U284),   // 284: Spain/Latin America
+		new CharsetInfo(U290),   // 290: Japanese Katakana
+		new CharsetInfo(U297),   // 297: French
+		new CharsetInfo(U420),   // 420: Arabic (type 4)
+		new CharsetInfo(U424),   // 424: Hebrew
+		new CharsetInfo(U500),   // 500: International
+		new CharsetInfo(U838),   // 838: Thai
+		new CharsetInfo(U870),   // 870: Croat/Czech/Polish/Serbian/Slovak
+		new CharsetInfo(U875),   // 875: Greek
+		new CharsetInfo(U918),   // 918: Urdu
+		new CharsetInfo(U924),   // 924: International
+		new CharsetInfo(U937),   // 937: Chinese Traditional
+		new CharsetInfo(U935),   // 935: Chinese Simplified
+		new CharsetInfo(U930),   // 930: Japanese
+		new CharsetInfo(U931),   // 931: Japanese
+		new CharsetInfo(U939),   // 939: Japanese
+		new CharsetInfo(U1390),  // 1390: Japanese
+		new CharsetInfo(U1399),  // 1399: Japanese
+		new CharsetInfo(U933),   // 933: Korean
+		new CharsetInfo(U1025),  // 1025: Cyrillic(Russian)
+		new CharsetInfo(U1026),  // 1026: Turkish
+		new CharsetInfo(U1097),  // 1097: Farsi Bilingual
+		new CharsetInfo(U1112),  // 1112: Baltic Multilingual
+		new CharsetInfo(U1137),  // 1137: Devanagari
+		new CharsetInfo(U1140),  // 1140: International
+		new CharsetInfo(U1141),  // 1141: German/Austrian
+		new CharsetInfo(U1142),  // 1142: Danish/Norwegian
+		new CharsetInfo(U1143),  // 1143: Finnish/Swedish
+		new CharsetInfo(U1144),  // 1144: Italian
+		new CharsetInfo(U1145),  // 1145: Spain/Latin America
+		new CharsetInfo(U1147),  // 1147: French
+		new CharsetInfo(U1148),  // 1148: International
+		new CharsetInfo(U1153)   // 1153: Croat/Czech/Polish/Serbian/Slovak
+		
+	];
     
-    toString():string{
-	return "<CharsetInfo " + this.name + " font=" + this.font + ">";
+    toString(): string {
+		return "<CharsetInfo " + this.name + " font=" + this.font + ">";
     }
 }
 
@@ -232,287 +222,262 @@ export class OIALine{
 
 }
 
-export class TypeValuePair { // was pr(t,l)
-    type:number;
-    value:string;
+export class TypeValuePair { 
+    type: number;
+    value: string;
     
-    constructor(type:number, value:string){
-	this.type = type;
-	this.value = value;
+    constructor(type: number, value: string){
+		this.type = type;
+		this.value = value;
     }
 }
 
 export type KeyboardMapEntry = (TypeValuePair|null)[];
 
-export class KeyboardMapEntry_old {  
-    t:TypeValuePair|null;
-    l:TypeValuePair|null;
-    n:TypeValuePair|null;
-    i:TypeValuePair|null;
-    e:TypeValuePair|null;
-    s:TypeValuePair|null;
-    u:TypeValuePair|null;
-    h:TypeValuePair|null;
-    r:(TypeValuePair|null)[];
-    
-    constructor(t:TypeValuePair|null,
-		l:TypeValuePair|null,
-		n:TypeValuePair|null,
-		i:TypeValuePair|null,
-		e:TypeValuePair|null,
-		s:TypeValuePair|null,
-		u:TypeValuePair|null,
-		h:TypeValuePair|null) {
-	this.r = [];
-	this.t = t;
-	this.l = l;
-	this.n = n;
-	this.i = i;
-	this.e = e;
-	this.s = s;
-	this.u = u;
-	this.h = h;
-	// (this.r[0] = t), (r[1] = l), (r[2] = n), (r[4] = i), (r[6] = e), (r[3] = s), (r[5] = u), (r[7] = h);
-    }
-}
+export class KeyboardMap {
 
-export class KeyboardMap{
-    // Ar(t, l, n, i, e, s, u, h) {
-    static entry(t:TypeValuePair|null,
-		 l:TypeValuePair|null,
-		 n:TypeValuePair|null,
-		 i:TypeValuePair|null,
-		 e:TypeValuePair|null,
-		 s:TypeValuePair|null,
-		 u:TypeValuePair|null,
-		 h:TypeValuePair|null){
-	let r:(TypeValuePair|null)[] = [];
-	(r[0] = t), (r[1] = l), (r[2] = n), (r[4] = i), (r[6] = e), (r[3] = s), (r[5] = u), (r[7] = h);
-	return r;
+    static entry(normal: TypeValuePair | null,
+		shiftKey: TypeValuePair | null,
+		ctrlKey: TypeValuePair | null,
+		altKey: TypeValuePair | null,
+		ctrlAltKey: TypeValuePair | null,
+		ctrlShiftKey: TypeValuePair | null,
+		altShiftKey: TypeValuePair | null,
+		ctrlAltShiftKey: TypeValuePair | null){
+		let keyModifiers:(TypeValuePair | null)[] = [];
+		keyModifiers[0] = normal;
+		keyModifiers[1] = shiftKey;
+		keyModifiers[2] = ctrlKey;
+		keyModifiers[3] = altKey;
+		keyModifiers[4] = ctrlAltKey;
+		keyModifiers[5] = ctrlShiftKey;
+		keyModifiers[6] = altShiftKey;
+		keyModifiers[7] = ctrlAltShiftKey;
+		return keyModifiers;
     }
     
     static standard:any = {  // was global gr = {......}
-          Accept: null,
-          Again: null,
-          AllCandidates: null,
-          Alphanumeric: null,
-          ContextMenu: null,
-          Attn: null,
-          BrowserBack: null,
-          BrowserFavorites: null,
-          BrowserForward: null,
-          BrowserHome: null,
-          BrowserRefresh: null,
-          BrowserSearch: null,
-          BrowserStop: null,
-          CapsLock: null,
-          Clear: null,
-          CodeInput: null,
-          Compose: null,
-          Crsel: null,
-          Convert: null,
-          Copy: null,
-          Cut: null,
-          Down: KeyboardMap.entry(new TypeValuePair(16, "Cursor Down"), null, null, null, null, null, null, null),
-          End: KeyboardMap.entry(new TypeValuePair(16, "End"), null, null, null, null, null, null, null),
-          Enter: KeyboardMap.entry(new TypeValuePair(16, "Enter"), null, new TypeValuePair(16, "New Line"), null, null, null, null, null),
-          EraseEof: null,
-          Execute: null,
-          Exsel: null,
-          F1: KeyboardMap.entry(new TypeValuePair(16, "PF01"), new TypeValuePair(16, "PF13"), null, null, null, null, null, null),
-          F2: KeyboardMap.entry(new TypeValuePair(16, "PF02"), new TypeValuePair(16, "PF14"), null, null, null, null, null, null),
-          F3: KeyboardMap.entry(new TypeValuePair(16, "PF03"), new TypeValuePair(16, "PF15"), null, null, null, null, null, null),
-          F4: KeyboardMap.entry(new TypeValuePair(16, "PF04"), new TypeValuePair(16, "PF16"), null, null, null, null, null, null),
-          F5: KeyboardMap.entry(new TypeValuePair(16, "PF05"), new TypeValuePair(16, "PF17"), null, null, null, null, null, null),
-          F6: KeyboardMap.entry(new TypeValuePair(16, "PF06"), new TypeValuePair(16, "PF18"), null, null, null, null, null, null),
-          F7: KeyboardMap.entry(new TypeValuePair(16, "PF07"), new TypeValuePair(16, "PF19"), null, null, null, null, null, null),
-          F8: KeyboardMap.entry(new TypeValuePair(16, "PF08"), new TypeValuePair(16, "PF20"), null, null, null, null, null, null),
-          F9: KeyboardMap.entry(new TypeValuePair(16, "PF09"), new TypeValuePair(16, "PF21"), null, null, null, null, null, null),
-          F10: KeyboardMap.entry(new TypeValuePair(16, "PF10"), new TypeValuePair(16, "PF22"), null, null, null, null, null, null),
-          F11: KeyboardMap.entry(new TypeValuePair(16, "PF11"), new TypeValuePair(16, "PF23"), null, null, null, null, null, null),
-          F12: KeyboardMap.entry(new TypeValuePair(16, "PF12"), new TypeValuePair(16, "PF24"), null, null, null, null, null, null),
-          F13: KeyboardMap.entry(new TypeValuePair(16, "PF13"), null, null, null, null, null, null, null),
-          F14: KeyboardMap.entry(new TypeValuePair(16, "PF14"), null, null, null, null, null, null, null),
-          F15: KeyboardMap.entry(new TypeValuePair(16, "PF15"), null, null, null, null, null, null, null),
-          F16: KeyboardMap.entry(new TypeValuePair(16, "PF16"), null, null, null, null, null, null, null),
-          F17: KeyboardMap.entry(new TypeValuePair(16, "PF17"), null, null, null, null, null, null, null),
-          F18: KeyboardMap.entry(new TypeValuePair(16, "PF18"), null, null, null, null, null, null, null),
-          F19: KeyboardMap.entry(new TypeValuePair(16, "PF19"), null, null, null, null, null, null, null),
-          F20: KeyboardMap.entry(new TypeValuePair(16, "PF20"), null, null, null, null, null, null, null),
-          F21: KeyboardMap.entry(new TypeValuePair(16, "PF21"), null, null, null, null, null, null, null),
-          F22: KeyboardMap.entry(new TypeValuePair(16, "PF22"), null, null, null, null, null, null, null),
-          F23: KeyboardMap.entry(new TypeValuePair(16, "PF23"), null, null, null, null, null, null, null),
-          F24: KeyboardMap.entry(new TypeValuePair(16, "PF24"), null, null, null, null, null, null, null),
-          FinalMode: null,
-          Find: null,
-          FullWidth: null,
-          HalfWidth: null,
-          HangulMode: null,
-          HanjaMode: null,
-          Help: null,
-          Hiragana: null,
-          Home: KeyboardMap.entry(new TypeValuePair(16, "Home"), null, null, null, null, null, null, null),
-          Insert: KeyboardMap.entry(new TypeValuePair(16, "Insert"), null, null, null, null, null, null, null),
-          JapaneseHiragana: null,
-          JapaneseKatakana: null,
-          JapaneseRomaji: null,
-          JunjaMode: null,
-          KanaMode: null,
-          KanjiMode: null,
-          Katakana: null,
-          LaunchApplication1: null,
-          LaunchApplication2: null,
-          LaunchMail: null,
-          Left: KeyboardMap.entry(new TypeValuePair(16, "Cursor Left"), null, new TypeValuePair(16, "Rapid Left"), null, null, null, null, null),
-          MediaNextTrack: null,
-          MediaPlayPause: null,
-          MediaPreviousTrack: null,
-          MediaStop: null,
-          ModeChange: null,
-          Nonconvert: null,
-          NumLock: null,
-          PageDown: KeyboardMap.entry(new TypeValuePair(2, "PageDown"), null, null, null, null, null, null, null),
-          PageUp: KeyboardMap.entry(new TypeValuePair(2, "PageUp"), null, null, null, null, null, null, null),
-          Paste: null,
-          Pause: null,
-          Play: null,
-          PreviousCandidate: null,
-          PrintScreen: null,
-          Process: null,
-          Props: null,
-          Right: KeyboardMap.entry(new TypeValuePair(16, "Cursor Right"), null, new TypeValuePair(16, "Rapid Right"), null, null, null, null, null),
-          RomanCharacters: null,
-          ScrollLock: null,
-          Select: null,
-          SelectMedia: null,
-          Stop: null,
-          Up: KeyboardMap.entry(new TypeValuePair(16, "Cursor Up"), null, null, null, null, null, null, null),
-          Undo: null,
-          VolumeDown: null,
-          VolumeMute: null,
-          VolumeUp: null,
-          Win: null,
-          Zoom: null,
-          " ": KeyboardMap.entry(new TypeValuePair(2, " "), new TypeValuePair(2, " "), null, null, null, null, null, null),
-          "!": KeyboardMap.entry(null, new TypeValuePair(2, "!"), null, null, null, null, null, null),
-          '"': KeyboardMap.entry(null, new TypeValuePair(2, '"'), null, null, null, null, null, null),
-          "#": KeyboardMap.entry(null, new TypeValuePair(2, "#"), null, null, null, null, null, null),
-          $: KeyboardMap.entry(null, new TypeValuePair(2, "$"), null, null, null, null, null, null),
-          "%": KeyboardMap.entry(null, new TypeValuePair(2, "%"), null, null, null, null, null, null),
-          "&": KeyboardMap.entry(null, new TypeValuePair(2, "&"), null, null, null, null, null, null),
-          "'": KeyboardMap.entry(new TypeValuePair(2, "'"), null, null, null, null, null, null, null),
-          "(": KeyboardMap.entry(null, new TypeValuePair(2, "("), null, null, null, null, null, null),
-          ")": KeyboardMap.entry(null, new TypeValuePair(2, ")"), null, null, null, null, null, null),
-          "*": KeyboardMap.entry(null, new TypeValuePair(2, "*"), null, null, null, null, null, null),
-          "+": KeyboardMap.entry(null, new TypeValuePair(2, "+"), null, null, null, null, null, null),
-          ",": KeyboardMap.entry(new TypeValuePair(2, ","), null, null, null, null, null, null, null),
-          "-": KeyboardMap.entry(new TypeValuePair(2, "-"), null, null, null, null, null, null, null),
-          ".": KeyboardMap.entry(new TypeValuePair(2, "."), null, null, null, null, null, null, null),
-          "/": KeyboardMap.entry(new TypeValuePair(2, "/"), null, null, null, null, null, null, null),
-          0: KeyboardMap.entry(new TypeValuePair(2, "0"), null, null, null, null, null, null, null),
-          1: KeyboardMap.entry(new TypeValuePair(2, "1"), null, new TypeValuePair(2, "|"), new TypeValuePair(16, "PA1"), null, null, null, null),
-          2: KeyboardMap.entry(new TypeValuePair(2, "2"), null, null, new TypeValuePair(16, "PA2"), null, null, null, null),
-          3: KeyboardMap.entry(new TypeValuePair(2, "3"), null, null, new TypeValuePair(16, "PA3"), null, null, null, null),
-          4: KeyboardMap.entry(new TypeValuePair(2, "4"), null, null, null, null, null, null, null),
-          5: KeyboardMap.entry(new TypeValuePair(2, "5"), null, null, null, null, null, null, null),
-          6: KeyboardMap.entry(new TypeValuePair(2, "6"), null, new TypeValuePair(2, String.fromCharCode.apply(null, [172])), null, null, null, null, null),
-          7: KeyboardMap.entry(new TypeValuePair(2, "7"), null, null, null, null, null, null, null),
-          8: KeyboardMap.entry(new TypeValuePair(2, "8"), null, null, null, null, null, null, null),
-          9: KeyboardMap.entry(new TypeValuePair(2, "9"), null, null, null, null, null, null, null),
-          Numpad0: KeyboardMap.entry(new TypeValuePair(2, "0"), null, null, null, null, null, null, null),
-          Numpad1: KeyboardMap.entry(new TypeValuePair(2, "1"), null, null, new TypeValuePair(2, "PA1"), null, null, null, null),
-          Numpad2: KeyboardMap.entry(new TypeValuePair(2, "2"), null, null, new TypeValuePair(2, "PA2"), null, null, null, null),
-          Numpad3: KeyboardMap.entry(new TypeValuePair(2, "3"), null, null, new TypeValuePair(2, "PA3"), null, null, null, null),
-          Numpad4: KeyboardMap.entry(new TypeValuePair(2, "4"), null, null, null, null, null, null, null),
-          Numpad5: KeyboardMap.entry(new TypeValuePair(2, "5"), null, null, null, null, null, null, null),
-          Numpad6: KeyboardMap.entry(new TypeValuePair(2, "6"), null, null, null, null, null, null, null),
-          Numpad7: KeyboardMap.entry(new TypeValuePair(2, "7"), null, null, null, null, null, null, null),
-          Numpad8: KeyboardMap.entry(new TypeValuePair(2, "8"), null, null, null, null, null, null, null),
-          Numpad9: KeyboardMap.entry(new TypeValuePair(2, "9"), null, null, null, null, null, null, null),
-          "Numpad/": KeyboardMap.entry(new TypeValuePair(2, "/"), null, null, null, null, null, null, null),
-          "Numpad*": KeyboardMap.entry(new TypeValuePair(2, "*"), null, null, null, null, null, null, null),
-          "Numpad-": KeyboardMap.entry(new TypeValuePair(2, "-"), null, null, null, null, null, null, null),
-          "Numpad+": KeyboardMap.entry(new TypeValuePair(2, "+"), null, null, null, null, null, null, null),
-          NumpadEnter: KeyboardMap.entry(new TypeValuePair(16, "Enter"), null, new TypeValuePair(16, "New Line"), null, null, null, null, null),
-          "Numpad.": KeyboardMap.entry(new TypeValuePair(2, "."), null, null, null, null, null, null, null),
-          NumpadUp: KeyboardMap.entry(new TypeValuePair(16, "Cursor Up"), null, null, null, null, null, null, null),
-          NumpadDown: KeyboardMap.entry(new TypeValuePair(16, "Cursor Down"), null, null, null, null, null, null, null),
-          NumpadLeft: KeyboardMap.entry(new TypeValuePair(16, "Cursor Left"), null, null, null, null, null, null, null),
-          NumpadRight: KeyboardMap.entry(new TypeValuePair(16, "Cursor Right"), null, null, null, null, null, null, null),
-          NumpadHome: KeyboardMap.entry(new TypeValuePair(16, "Home"), null, null, null, null, null, null, null),
-          NumpadPageUp: KeyboardMap.entry(new TypeValuePair(2, "PageUp"), null, null, null, null, null, null, null),
-          NumpadPageDown: KeyboardMap.entry(new TypeValuePair(2, "PageDown"), null, null, null, null, null, null, null),
-          NumpadEnd: KeyboardMap.entry(new TypeValuePair(2, "End"), null, null, null, null, null, null, null),
-          NumpadInsert: KeyboardMap.entry(new TypeValuePair(16, "Insert"), null, null, null, null, null, null, null),
-          NumpadDelete: KeyboardMap.entry(new TypeValuePair(16, "Delete"), null, null, null, null, null, null, null),
-          ":": KeyboardMap.entry(null, new TypeValuePair(2, ":"), null, null, null, null, null, null),
-          ";": KeyboardMap.entry(new TypeValuePair(2, ";"), null, null, null, null, null, null, null),
-          "<": KeyboardMap.entry(null, new TypeValuePair(2, "<"), null, null, null, null, null, null),
-          "=": KeyboardMap.entry(new TypeValuePair(2, "="), null, null, null, null, null, null, null),
-          ">": KeyboardMap.entry(null, new TypeValuePair(2, ">"), null, null, null, null, null, null),
-          "?": KeyboardMap.entry(null, new TypeValuePair(2, "?"), null, null, null, null, null, null),
-          "@": KeyboardMap.entry(null, new TypeValuePair(2, "@"), null, null, null, null, null, null),
-          "[": KeyboardMap.entry(new TypeValuePair(2, "["), null, new TypeValuePair(2, String.fromCharCode.apply(null, [162])), null, null, null, null, null),
-          "\\": KeyboardMap.entry(new TypeValuePair(2, "\\"), null, null, null, null, null, null, null),
-          "]": KeyboardMap.entry(new TypeValuePair(2, "]"), null, null, null, null, null, null, null),
-          "^": KeyboardMap.entry(null, new TypeValuePair(2, "^"), null, null, null, null, null, null),
-          _: KeyboardMap.entry(null, new TypeValuePair(2, "_"), null, null, null, null, null, null),
-          "`": KeyboardMap.entry(new TypeValuePair(2, "`"), null, null, null, null, null, null, null),
-          a: KeyboardMap.entry(new TypeValuePair(2, "a"), new TypeValuePair(2, "A"), new TypeValuePair(16, "Attn"), null, null, null, null, null),
-          b: KeyboardMap.entry(new TypeValuePair(2, "b"), new TypeValuePair(2, "B"), null, null, null, null, null, null),
-          c: KeyboardMap.entry(new TypeValuePair(2, "c"), new TypeValuePair(2, "C"), null, null, null, null, null, null),
-          d: KeyboardMap.entry(new TypeValuePair(2, "d"), new TypeValuePair(2, "D"), new TypeValuePair(16, "Dup"), null, null, null, null, null),
-          e: KeyboardMap.entry(new TypeValuePair(2, "e"), new TypeValuePair(2, "E"), new TypeValuePair(16, "Erase EOF"), null, null, null, null, null),
-          f: KeyboardMap.entry(new TypeValuePair(2, "f"), new TypeValuePair(2, "F"), null, null, null, null, null, null),
-          g: KeyboardMap.entry(new TypeValuePair(2, "g"), new TypeValuePair(2, "G"), null, null, null, null, null, null),
-          h: KeyboardMap.entry(new TypeValuePair(2, "h"), new TypeValuePair(2, "H"), null, null, null, null, null, null),
-          i: KeyboardMap.entry(new TypeValuePair(2, "i"), new TypeValuePair(2, "I"), new TypeValuePair(16, "Erase Input"), null, null, null, null, null),
-          j: KeyboardMap.entry(new TypeValuePair(2, "j"), new TypeValuePair(2, "J"), null, null, null, null, null, null),
-          k: KeyboardMap.entry(new TypeValuePair(2, "k"), new TypeValuePair(2, "K"), null, null, null, null, null, null),
-          l: KeyboardMap.entry(new TypeValuePair(2, "l"), new TypeValuePair(2, "L"), new TypeValuePair(16, "Erase Field"), null, null, null, null, null),
-          m: KeyboardMap.entry(new TypeValuePair(2, "m"), new TypeValuePair(2, "M"), null, null, null, null, null, null),
-          n: KeyboardMap.entry(new TypeValuePair(2, "n"), new TypeValuePair(2, "N"), null, new TypeValuePair(16, "Null"), null, null, null, null),
-          o: KeyboardMap.entry(new TypeValuePair(2, "o"), new TypeValuePair(2, "O"), null, null, null, null, null, null),
-          p: KeyboardMap.entry(new TypeValuePair(2, "p"), new TypeValuePair(2, "P"), null, null, null, null, null, null),
-          q: KeyboardMap.entry(new TypeValuePair(2, "q"), new TypeValuePair(2, "Q"), null, null, null, null, null, null),
-          r: KeyboardMap.entry(new TypeValuePair(2, "r"), new TypeValuePair(2, "R"), new TypeValuePair(16, "Reset"), new TypeValuePair(16, "Reset"), null, null, null, null),
-          s: KeyboardMap.entry(new TypeValuePair(2, "s"), new TypeValuePair(2, "S"), null, null, null, null, null, null),
-          t: KeyboardMap.entry(new TypeValuePair(2, "t"), new TypeValuePair(2, "T"), null, null, null, null, null, null),
-          u: KeyboardMap.entry(new TypeValuePair(2, "u"), new TypeValuePair(2, "U"), null, null, null, null, null, null),
-          v: KeyboardMap.entry(new TypeValuePair(2, "v"), new TypeValuePair(2, "V"), null, null, null, null, null, null),
-          w: KeyboardMap.entry(new TypeValuePair(2, "w"), new TypeValuePair(2, "W"), null, new TypeValuePair(16, "Erase Word"), null, null, null, null),
-          x: KeyboardMap.entry(new TypeValuePair(2, "x"), new TypeValuePair(2, "X"), null, null, null, null, null, null),
-          y: KeyboardMap.entry(new TypeValuePair(2, "y"), new TypeValuePair(2, "Y"), null, null, null, null, null, null),
-          z: KeyboardMap.entry(new TypeValuePair(2, "z"), new TypeValuePair(2, "Z"), null, null, null, new TypeValuePair(16, "Clear"), null, null),
-          "{": KeyboardMap.entry(null, new TypeValuePair(2, "{"), null, null, null, null, null, null),
-          "|": KeyboardMap.entry(null, new TypeValuePair(2, "|"), null, null, null, null, null, null),
-          "}": KeyboardMap.entry(null, new TypeValuePair(2, "}"), null, null, null, null, null, null),
-          "~": KeyboardMap.entry(null, new TypeValuePair(2, "~"), null, null, null, null, null, null),
-          Backspace: KeyboardMap.entry(new TypeValuePair(16, "Backspace"), null, null, null, null, null, null, null),
-          Tab: KeyboardMap.entry(new TypeValuePair(16, "Tab"), new TypeValuePair(16, "Back Tab"), null, null, null, null, null, null),
-          "U+0018": null,
-          Escape: KeyboardMap.entry(new TypeValuePair(2, "Escape"), null, null, null, null, null, null, null),
-          Delete: KeyboardMap.entry(new TypeValuePair(16, "Delete"), null, null, null, null, null, null, null),
-          "U+00A1": null,
-          "U+0300": null,
-          "U+0301": null,
-          "U+0302": null,
-          "U+0303": null,
-          "U+0304": null,
-          "U+0306": null,
-          "U+0307": null,
-          "U+0308": null,
-          "U+030A": null,
-          "U+030B": null,
-          "U+030C": null,
-          "U+0327": null,
-          "U+0328": null,
-          "U+0345": null,
-          "U+20AC": null,
-          "U+3099": null,
-          "U+309A": null,
-          ControlLeft: KeyboardMap.entry(new TypeValuePair(16, "Reset"), null, null, null, null, null, null, null),
-          ControlRight: KeyboardMap.entry(new TypeValuePair(16, "Enter"), null, null, null, null, null, null, null),
+		Accept: null,
+		Again: null,
+		AllCandidates: null,
+		Alphanumeric: null,
+		ContextMenu: null,
+		Attn: null,
+		BrowserBack: null,
+		BrowserFavorites: null,
+		BrowserForward: null,
+		BrowserHome: null,
+		BrowserRefresh: null,
+		BrowserSearch: null,
+		BrowserStop: null,
+		CapsLock: null,
+		Clear: null,
+		CodeInput: null,
+		Compose: null,
+		Crsel: null,
+		Convert: null,
+		Copy: null,
+		Cut: null,
+		Down: KeyboardMap.entry(new TypeValuePair(16, "Cursor Down"), null, null, null, null, null, null, null),
+		End: KeyboardMap.entry(new TypeValuePair(16, "End"), null, null, null, null, null, null, null),
+		Enter: KeyboardMap.entry(new TypeValuePair(16, "Enter"), null, new TypeValuePair(16, "New Line"), null, null, null, null, null),
+		EraseEof: null,
+		Execute: null,
+		Exsel: null,
+		F1: KeyboardMap.entry(new TypeValuePair(16, "PF01"), new TypeValuePair(16, "PF13"), null, null, null, null, null, null),
+		F2: KeyboardMap.entry(new TypeValuePair(16, "PF02"), new TypeValuePair(16, "PF14"), null, null, null, null, null, null),
+		F3: KeyboardMap.entry(new TypeValuePair(16, "PF03"), new TypeValuePair(16, "PF15"), null, null, null, null, null, null),
+		F4: KeyboardMap.entry(new TypeValuePair(16, "PF04"), new TypeValuePair(16, "PF16"), null, null, null, null, null, null),
+		F5: KeyboardMap.entry(new TypeValuePair(16, "PF05"), new TypeValuePair(16, "PF17"), null, null, null, null, null, null),
+		F6: KeyboardMap.entry(new TypeValuePair(16, "PF06"), new TypeValuePair(16, "PF18"), null, null, null, null, null, null),
+		F7: KeyboardMap.entry(new TypeValuePair(16, "PF07"), new TypeValuePair(16, "PF19"), null, null, null, null, null, null),
+		F8: KeyboardMap.entry(new TypeValuePair(16, "PF08"), new TypeValuePair(16, "PF20"), null, null, null, null, null, null),
+		F9: KeyboardMap.entry(new TypeValuePair(16, "PF09"), new TypeValuePair(16, "PF21"), null, null, null, null, null, null),
+		F10: KeyboardMap.entry(new TypeValuePair(16, "PF10"), new TypeValuePair(16, "PF22"), null, null, null, null, null, null),
+		F11: KeyboardMap.entry(new TypeValuePair(16, "PF11"), new TypeValuePair(16, "PF23"), null, null, null, null, null, null),
+		F12: KeyboardMap.entry(new TypeValuePair(16, "PF12"), new TypeValuePair(16, "PF24"), null, null, null, null, null, null),
+		F13: KeyboardMap.entry(new TypeValuePair(16, "PF13"), null, null, null, null, null, null, null),
+		F14: KeyboardMap.entry(new TypeValuePair(16, "PF14"), null, null, null, null, null, null, null),
+		F15: KeyboardMap.entry(new TypeValuePair(16, "PF15"), null, null, null, null, null, null, null),
+		F16: KeyboardMap.entry(new TypeValuePair(16, "PF16"), null, null, null, null, null, null, null),
+		F17: KeyboardMap.entry(new TypeValuePair(16, "PF17"), null, null, null, null, null, null, null),
+		F18: KeyboardMap.entry(new TypeValuePair(16, "PF18"), null, null, null, null, null, null, null),
+		F19: KeyboardMap.entry(new TypeValuePair(16, "PF19"), null, null, null, null, null, null, null),
+		F20: KeyboardMap.entry(new TypeValuePair(16, "PF20"), null, null, null, null, null, null, null),
+		F21: KeyboardMap.entry(new TypeValuePair(16, "PF21"), null, null, null, null, null, null, null),
+		F22: KeyboardMap.entry(new TypeValuePair(16, "PF22"), null, null, null, null, null, null, null),
+		F23: KeyboardMap.entry(new TypeValuePair(16, "PF23"), null, null, null, null, null, null, null),
+		F24: KeyboardMap.entry(new TypeValuePair(16, "PF24"), null, null, null, null, null, null, null),
+		FinalMode: null,
+		Find: null,
+		FullWidth: null,
+		HalfWidth: null,
+		HangulMode: null,
+		HanjaMode: null,
+		Help: null,
+		Hiragana: null,
+		Home: KeyboardMap.entry(new TypeValuePair(16, "Home"), null, null, null, null, null, null, null),
+		Insert: KeyboardMap.entry(new TypeValuePair(16, "Insert"), null, null, null, null, null, null, null),
+		JapaneseHiragana: null,
+		JapaneseKatakana: null,
+		JapaneseRomaji: null,
+		JunjaMode: null,
+		KanaMode: null,
+		KanjiMode: null,
+		Katakana: null,
+		LaunchApplication1: null,
+		LaunchApplication2: null,
+		LaunchMail: null,
+		Left: KeyboardMap.entry(new TypeValuePair(16, "Cursor Left"), null, new TypeValuePair(16, "Rapid Left"), null, null, null, null, null),
+		MediaNextTrack: null,
+		MediaPlayPause: null,
+		MediaPreviousTrack: null,
+		MediaStop: null,
+		ModeChange: null,
+		Nonconvert: null,
+		NumLock: null,
+		PageDown: KeyboardMap.entry(new TypeValuePair(2, "PageDown"), null, null, null, null, null, null, null),
+		PageUp: KeyboardMap.entry(new TypeValuePair(2, "PageUp"), null, null, null, null, null, null, null),
+		Paste: null,
+		Pause: null,
+		Play: null,
+		PreviousCandidate: null,
+		PrintScreen: null,
+		Process: null,
+		Props: null,
+		Right: KeyboardMap.entry(new TypeValuePair(16, "Cursor Right"), null, new TypeValuePair(16, "Rapid Right"), null, null, null, null, null),
+		RomanCharacters: null,
+		ScrollLock: null,
+		Select: null,
+		SelectMedia: null,
+		Stop: null,
+		Up: KeyboardMap.entry(new TypeValuePair(16, "Cursor Up"), null, null, null, null, null, null, null),
+		Undo: null,
+		VolumeDown: null,
+		VolumeMute: null,
+		VolumeUp: null,
+		Win: null,
+		Zoom: null,
+		" ": KeyboardMap.entry(new TypeValuePair(2, " "), new TypeValuePair(2, " "), null, null, null, null, null, null),
+		"!": KeyboardMap.entry(null, new TypeValuePair(2, "!"), null, null, null, null, null, null),
+		'"': KeyboardMap.entry(null, new TypeValuePair(2, '"'), null, null, null, null, null, null),
+		"#": KeyboardMap.entry(null, new TypeValuePair(2, "#"), null, null, null, null, null, null),
+		$: KeyboardMap.entry(null, new TypeValuePair(2, "$"), null, null, null, null, null, null),
+		"%": KeyboardMap.entry(null, new TypeValuePair(2, "%"), null, null, null, null, null, null),
+		"&": KeyboardMap.entry(null, new TypeValuePair(2, "&"), null, null, null, null, null, null),
+		"'": KeyboardMap.entry(new TypeValuePair(2, "'"), null, null, null, null, null, null, null),
+		"(": KeyboardMap.entry(null, new TypeValuePair(2, "("), null, null, null, null, null, null),
+		")": KeyboardMap.entry(null, new TypeValuePair(2, ")"), null, null, null, null, null, null),
+		"*": KeyboardMap.entry(null, new TypeValuePair(2, "*"), null, null, null, null, null, null),
+		"+": KeyboardMap.entry(null, new TypeValuePair(2, "+"), null, null, null, null, null, null),
+		",": KeyboardMap.entry(new TypeValuePair(2, ","), null, null, null, null, null, null, null),
+		"-": KeyboardMap.entry(new TypeValuePair(2, "-"), null, null, null, null, null, null, null),
+		".": KeyboardMap.entry(new TypeValuePair(2, "."), null, null, null, null, null, null, null),
+		"/": KeyboardMap.entry(new TypeValuePair(2, "/"), null, null, null, null, null, null, null),
+		0: KeyboardMap.entry(new TypeValuePair(2, "0"), null, null, null, null, null, null, null),
+		1: KeyboardMap.entry(new TypeValuePair(2, "1"), null, new TypeValuePair(2, "|"), new TypeValuePair(16, "PA1"), null, null, null, null),
+		2: KeyboardMap.entry(new TypeValuePair(2, "2"), null, null, new TypeValuePair(16, "PA2"), null, null, null, null),
+		3: KeyboardMap.entry(new TypeValuePair(2, "3"), null, null, new TypeValuePair(16, "PA3"), null, null, null, null),
+		4: KeyboardMap.entry(new TypeValuePair(2, "4"), null, null, null, null, null, null, null),
+		5: KeyboardMap.entry(new TypeValuePair(2, "5"), null, null, null, null, null, null, null),
+		6: KeyboardMap.entry(new TypeValuePair(2, "6"), null, new TypeValuePair(2, String.fromCharCode.apply(null, [172])), null, null, null, null, null),
+		7: KeyboardMap.entry(new TypeValuePair(2, "7"), null, null, null, null, null, null, null),
+		8: KeyboardMap.entry(new TypeValuePair(2, "8"), null, null, null, null, null, null, null),
+		9: KeyboardMap.entry(new TypeValuePair(2, "9"), null, null, null, null, null, null, null),
+		Numpad0: KeyboardMap.entry(new TypeValuePair(2, "0"), null, null, null, null, null, null, null),
+		Numpad1: KeyboardMap.entry(new TypeValuePair(2, "1"), null, null, new TypeValuePair(2, "PA1"), null, null, null, null),
+		Numpad2: KeyboardMap.entry(new TypeValuePair(2, "2"), null, null, new TypeValuePair(2, "PA2"), null, null, null, null),
+		Numpad3: KeyboardMap.entry(new TypeValuePair(2, "3"), null, null, new TypeValuePair(2, "PA3"), null, null, null, null),
+		Numpad4: KeyboardMap.entry(new TypeValuePair(2, "4"), null, null, null, null, null, null, null),
+		Numpad5: KeyboardMap.entry(new TypeValuePair(2, "5"), null, null, null, null, null, null, null),
+		Numpad6: KeyboardMap.entry(new TypeValuePair(2, "6"), null, null, null, null, null, null, null),
+		Numpad7: KeyboardMap.entry(new TypeValuePair(2, "7"), null, null, null, null, null, null, null),
+		Numpad8: KeyboardMap.entry(new TypeValuePair(2, "8"), null, null, null, null, null, null, null),
+		Numpad9: KeyboardMap.entry(new TypeValuePair(2, "9"), null, null, null, null, null, null, null),
+		"Numpad/": KeyboardMap.entry(new TypeValuePair(2, "/"), null, null, null, null, null, null, null),
+		"Numpad*": KeyboardMap.entry(new TypeValuePair(2, "*"), null, null, null, null, null, null, null),
+		"Numpad-": KeyboardMap.entry(new TypeValuePair(2, "-"), null, null, null, null, null, null, null),
+		"Numpad+": KeyboardMap.entry(new TypeValuePair(2, "+"), null, null, null, null, null, null, null),
+		NumpadEnter: KeyboardMap.entry(new TypeValuePair(16, "Enter"), null, new TypeValuePair(16, "New Line"), null, null, null, null, null),
+		"Numpad.": KeyboardMap.entry(new TypeValuePair(2, "."), null, null, null, null, null, null, null),
+		NumpadUp: KeyboardMap.entry(new TypeValuePair(16, "Cursor Up"), null, null, null, null, null, null, null),
+		NumpadDown: KeyboardMap.entry(new TypeValuePair(16, "Cursor Down"), null, null, null, null, null, null, null),
+		NumpadLeft: KeyboardMap.entry(new TypeValuePair(16, "Cursor Left"), null, null, null, null, null, null, null),
+		NumpadRight: KeyboardMap.entry(new TypeValuePair(16, "Cursor Right"), null, null, null, null, null, null, null),
+		NumpadHome: KeyboardMap.entry(new TypeValuePair(16, "Home"), null, null, null, null, null, null, null),
+		NumpadPageUp: KeyboardMap.entry(new TypeValuePair(2, "PageUp"), null, null, null, null, null, null, null),
+		NumpadPageDown: KeyboardMap.entry(new TypeValuePair(2, "PageDown"), null, null, null, null, null, null, null),
+		NumpadEnd: KeyboardMap.entry(new TypeValuePair(2, "End"), null, null, null, null, null, null, null),
+		NumpadInsert: KeyboardMap.entry(new TypeValuePair(16, "Insert"), null, null, null, null, null, null, null),
+		NumpadDelete: KeyboardMap.entry(new TypeValuePair(16, "Delete"), null, null, null, null, null, null, null),
+		":": KeyboardMap.entry(null, new TypeValuePair(2, ":"), null, null, null, null, null, null),
+		";": KeyboardMap.entry(new TypeValuePair(2, ";"), null, null, null, null, null, null, null),
+		"<": KeyboardMap.entry(null, new TypeValuePair(2, "<"), null, null, null, null, null, null),
+		"=": KeyboardMap.entry(new TypeValuePair(2, "="), null, null, null, null, null, null, null),
+		">": KeyboardMap.entry(null, new TypeValuePair(2, ">"), null, null, null, null, null, null),
+		"?": KeyboardMap.entry(null, new TypeValuePair(2, "?"), null, null, null, null, null, null),
+		"@": KeyboardMap.entry(null, new TypeValuePair(2, "@"), null, null, null, null, null, null),
+		"[": KeyboardMap.entry(new TypeValuePair(2, "["), null, new TypeValuePair(2, String.fromCharCode.apply(null, [162])), null, null, null, null, null),
+		"\\": KeyboardMap.entry(new TypeValuePair(2, "\\"), null, null, null, null, null, null, null),
+		"]": KeyboardMap.entry(new TypeValuePair(2, "]"), null, null, null, null, null, null, null),
+		"^": KeyboardMap.entry(null, new TypeValuePair(2, "^"), null, null, null, null, null, null),
+		_: KeyboardMap.entry(null, new TypeValuePair(2, "_"), null, null, null, null, null, null),
+		"`": KeyboardMap.entry(new TypeValuePair(2, "`"), null, null, null, null, null, null, null),
+		a: KeyboardMap.entry(new TypeValuePair(2, "a"), new TypeValuePair(2, "A"), new TypeValuePair(16, "Attn"), null, null, null, null, null),
+		b: KeyboardMap.entry(new TypeValuePair(2, "b"), new TypeValuePair(2, "B"), null, null, null, null, null, null),
+		c: KeyboardMap.entry(new TypeValuePair(2, "c"), new TypeValuePair(2, "C"), null, null, null, null, null, null),
+		d: KeyboardMap.entry(new TypeValuePair(2, "d"), new TypeValuePair(2, "D"), new TypeValuePair(16, "Dup"), null, null, null, null, null),
+		e: KeyboardMap.entry(new TypeValuePair(2, "e"), new TypeValuePair(2, "E"), new TypeValuePair(16, "Erase EOF"), null, null, null, null, null),
+		f: KeyboardMap.entry(new TypeValuePair(2, "f"), new TypeValuePair(2, "F"), null, null, null, null, null, null),
+		g: KeyboardMap.entry(new TypeValuePair(2, "g"), new TypeValuePair(2, "G"), null, null, null, null, null, null),
+		h: KeyboardMap.entry(new TypeValuePair(2, "h"), new TypeValuePair(2, "H"), null, null, null, null, null, null),
+		i: KeyboardMap.entry(new TypeValuePair(2, "i"), new TypeValuePair(2, "I"), new TypeValuePair(16, "Erase Input"), null, null, null, null, null),
+		j: KeyboardMap.entry(new TypeValuePair(2, "j"), new TypeValuePair(2, "J"), null, null, null, null, null, null),
+		k: KeyboardMap.entry(new TypeValuePair(2, "k"), new TypeValuePair(2, "K"), null, null, null, null, null, null),
+		l: KeyboardMap.entry(new TypeValuePair(2, "l"), new TypeValuePair(2, "L"), new TypeValuePair(16, "Erase Field"), null, null, null, null, null),
+		m: KeyboardMap.entry(new TypeValuePair(2, "m"), new TypeValuePair(2, "M"), null, null, null, null, null, null),
+		n: KeyboardMap.entry(new TypeValuePair(2, "n"), new TypeValuePair(2, "N"), null, new TypeValuePair(16, "Null"), null, null, null, null),
+		o: KeyboardMap.entry(new TypeValuePair(2, "o"), new TypeValuePair(2, "O"), null, null, null, null, null, null),
+		p: KeyboardMap.entry(new TypeValuePair(2, "p"), new TypeValuePair(2, "P"), null, null, null, null, null, null),
+		q: KeyboardMap.entry(new TypeValuePair(2, "q"), new TypeValuePair(2, "Q"), null, null, null, null, null, null),
+		r: KeyboardMap.entry(new TypeValuePair(2, "r"), new TypeValuePair(2, "R"), new TypeValuePair(16, "Reset"), new TypeValuePair(16, "Reset"), null, null, null, null),
+		s: KeyboardMap.entry(new TypeValuePair(2, "s"), new TypeValuePair(2, "S"), null, null, null, null, null, null),
+		t: KeyboardMap.entry(new TypeValuePair(2, "t"), new TypeValuePair(2, "T"), null, null, null, null, null, null),
+		u: KeyboardMap.entry(new TypeValuePair(2, "u"), new TypeValuePair(2, "U"), null, null, null, null, null, null),
+		v: KeyboardMap.entry(new TypeValuePair(2, "v"), new TypeValuePair(2, "V"), null, null, null, null, null, null),
+		w: KeyboardMap.entry(new TypeValuePair(2, "w"), new TypeValuePair(2, "W"), null, new TypeValuePair(16, "Erase Word"), null, null, null, null),
+		x: KeyboardMap.entry(new TypeValuePair(2, "x"), new TypeValuePair(2, "X"), null, null, null, null, null, null),
+		y: KeyboardMap.entry(new TypeValuePair(2, "y"), new TypeValuePair(2, "Y"), null, null, null, null, null, null),
+		z: KeyboardMap.entry(new TypeValuePair(2, "z"), new TypeValuePair(2, "Z"), null, null, null, new TypeValuePair(16, "Clear"), null, null),
+		"{": KeyboardMap.entry(null, new TypeValuePair(2, "{"), null, null, null, null, null, null),
+		"|": KeyboardMap.entry(null, new TypeValuePair(2, "|"), null, null, null, null, null, null),
+		"}": KeyboardMap.entry(null, new TypeValuePair(2, "}"), null, null, null, null, null, null),
+		"~": KeyboardMap.entry(null, new TypeValuePair(2, "~"), null, null, null, null, null, null),
+		Backspace: KeyboardMap.entry(new TypeValuePair(16, "Backspace"), null, null, null, null, null, null, null),
+		Tab: KeyboardMap.entry(new TypeValuePair(16, "Tab"), new TypeValuePair(16, "Back Tab"), null, null, null, null, null, null),
+		"U+0018": null,
+		Escape: KeyboardMap.entry(new TypeValuePair(2, "Escape"), null, null, null, null, null, null, null),
+		Delete: KeyboardMap.entry(new TypeValuePair(16, "Delete"), null, null, null, null, null, null, null),
+		"U+00A1": null,
+		"U+0300": null,
+		"U+0301": null,
+		"U+0302": null,
+		"U+0303": null,
+		"U+0304": null,
+		"U+0306": null,
+		"U+0307": null,
+		"U+0308": null,
+		"U+030A": null,
+		"U+030B": null,
+		"U+030C": null,
+		"U+0327": null,
+		"U+0328": null,
+		"U+0345": null,
+		"U+20AC": null,
+		"U+3099": null,
+		"U+309A": null,
+		ControlLeft: KeyboardMap.entry(new TypeValuePair(16, "Reset"), null, null, null, null, null, null, null),
+		ControlRight: KeyboardMap.entry(new TypeValuePair(16, "Enter"), null, null, null, null, null, null, null),
     }
 
     static ir:any = { // a global ir, that doesn't have a great name yet
