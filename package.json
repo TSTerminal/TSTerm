@@ -1,7 +1,7 @@
 {
   "name": "TSTerm",
   "version": "1.0.1",
-  "description": "TSTerm is a software package that provides 3270 terminal functionality in a TypeScript implementation.   A brief explanation of the project can be found at:",
+  "description": "TSTerm is a software package that provides 3270 terminal functionality in a TypeScript implementation.",
   "main": "./lib/tsterm.min.js",
   "type": "module", 
   "types": "./lib/tsterm.d.ts",
@@ -18,9 +18,9 @@
     "type": "git",
     "url": "git+https://github.com/TSTerminal/TSTerm.git"
   },
-  "keywords": [],
+  "keywords": ["tn3270","zos","terminal"],
   "author": "",
-  "license": "ISC",
+  "license": "EPL-2.0",
   "bugs": {
     "url": "https://github.com/TSTerminal/TSTerm/issues"
   },
