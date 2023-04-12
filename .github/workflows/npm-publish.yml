@@ -29,6 +29,8 @@ jobs:
         run: npm ci
       - name: '[Build] all'
         run: npm run build:all
+      - name: '[Version] set from tag name'
+        run: node -e "const fs=require('fs'); let file=JSON.parse(fs.readFileSync('package.json','utf8')); file.version='${{ github.event.release.tag_name }}'.substring(1); fs.writeFileSync('package.json',JSON.stringify(file,null,2));"
       - name: '[Clean]'
         run: npm run prepublish
       - name: '[Publish] npmjs.org'
