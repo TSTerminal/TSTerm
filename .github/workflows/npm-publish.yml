@@ -1,0 +1,49 @@
+name: Publish to npm
+on:
+  release:
+    types: [released]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: '[Prep 1] Checkout'
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - name: '[Prep 2] Cache node modules'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.npm
+            ~/.nvm/.cache
+            ~/.nvm/versions
+          key: ${{ runner.os }}-build-cache-node-modules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-cache-node-modules-
+      - name: '[Prep 3] Setup Node'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - name: '[Install] Install'
+        run: npm ci
+      - name: '[Build] all'
+        run: npm run build:all
+      - name: '[Version] set from tag name'
+        run: node -e "const fs=require('fs'); let file=JSON.parse(fs.readFileSync('package.json','utf8')); file.version='${{ github.event.release.tag_name }}'.substring(1); fs.writeFileSync('package.json',JSON.stringify(file,null,2));"
+      - name: '[Clean]'
+        run: npm run cleanforpublish
+      - name: '[Report] Show contents for publish'
+        run: ls -ltr && cat package.json
+      - name: '[Publish] npmjs.org'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH }}
+      - name: '[Setup] node registry'
+        uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://npm.pkg.github.com'
+      - name: '[Publish] npm.pkg.github.com'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
