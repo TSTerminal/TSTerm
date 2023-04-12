@@ -13,7 +13,7 @@
     "build:dts:iife": "dts-bundle-generator -o ./lib/iife/tsterm.d.ts ./src/publicApi.ts",
     "test": "echo \"Error: no test specified\" && exit 0",
     "build:all": "npm run build && npm run build:iife && npm run build:dts && npm run build:dts:iife",
-    "prepublish": "rm -rf src historical .git* *.js *.json"
+    "prepublish": "rm -rf src historical .git* *.js"
   },
   "repository": {
     "type": "git",
