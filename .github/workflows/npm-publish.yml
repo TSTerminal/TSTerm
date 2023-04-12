@@ -10,7 +10,7 @@ jobs:
       - name: '[Prep 1] Checkout'
         uses: actions/checkout@v2
         with:
-          ref: github.event.release.tag_name
+          ref: ${{ github.event.release.tag_name }}
       - name: '[Prep 2] Cache node modules'
         uses: actions/cache@v2
         with:
