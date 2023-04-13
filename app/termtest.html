@@ -1,18 +1,24 @@
+<!--
+    This program and the accompanying materials are
+    made available under the terms of the Eclipse Public License v2.0 which accompanies
+    this distribution, and is available at https://www.eclipse.org/legal/epl-v20.html
+
+    SPDX-License-Identifier: EPL-2.0
+
+    Copyright Contributors to the Zowe Project.
+    Copyright Contributors to the Open Mainframe Project's TSTerm Project
+-->
+
 <!DOCTYPE html>
 <html>
   <head>    
     <meta charset="UTF-8">
     <title>TSTerm_Test Harness</title>
-    <style TYPE="text/css">
-      body {
-	  overflow: hidden; /* Hide scrollbars */
-      }
-    </style>
+    <link rel="stylesheet" type="text/css" href="css/style.css">
     <script type="module">
       import { TerminalLauncher } from "../lib/tsterm.js";
       console.log("TSTerm loaded");
-
-      
+ 
       class ResizeWatcher{
 	  constructor(eventCollapseInterval){
 	      // bag all resize events to this interval to not make this a
@@ -127,16 +133,18 @@
   <body id="theBody" onload="initLayout()">
     <div id="app" >
       <div id="controlArea">
-	<h2>TSTerm Test Page</h2>    
-	<form>
-	  <select name="deviceTypes" id="deviceTypes">
-	    <option value="1">Mod 2</option>
-	    <option value="2">Mod 3</option>
-	    <option value="3">Mod 4</option>
-	    <option value="4">Mod 5</option>
-	    <option value="5" selected>Dynamic</option>
-	  </select>
-	</form>
+	<h1>TSTerm Test Page</h1>    
+	<p>
+		<form>
+			<select name="deviceTypes" id="deviceTypes">
+				<option value="1">Mod 2</option>
+				<option value="2">Mod 3</option>
+				<option value="3">Mod 4</option>
+				<option value="4">Mod 5</option>
+				<option value="5" selected>Dynamic</option>
+			</select>
+		</form>
+	</p>
 	<button onclick="go(false)">Launch through Zowe Proxy</button>
 	<button onclick="go(true)">Launch through tiny Proxy</button>
 	<button onclick="renderTest()">Render Test</button>
@@ -147,3 +155,14 @@
     </div>
   </body>
 </html>
+
+<!--
+    This program and the accompanying materials are
+    made available under the terms of the Eclipse Public License v2.0 which accompanies
+    this distribution, and is available at https://www.eclipse.org/legal/epl-v20.html
+
+    SPDX-License-Identifier: EPL-2.0
+
+    Copyright Contributors to the Zowe Project.
+    Copyright Contributors to the Open Mainframe Project's TSTerm Project
+-->
