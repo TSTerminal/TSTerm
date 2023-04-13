@@ -1,14 +1,51 @@
+<!--
+    This program and the accompanying materials are
+    made available under the terms of the Eclipse Public License v2.0 which accompanies
+    this distribution, and is available at https://www.eclipse.org/legal/epl-v20.html
+
+    SPDX-License-Identifier: EPL-2.0
+
+    Copyright Contributors to the Zowe Project.
+    Copyright Contributors to the Open Mainframe Project's TSTerm Project
+-->
+
 <!DOCTYPE html>
 <html>
-   <head>
-      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-      <title>TSTerm</title>
-   </head>
-<body>
-    <h1>TSTerm home page</h1>
-    <p>The test proxy server also serves static pages to test in a browser. Navigate to the following URL in a modern browser:</p>
-    <ul>
-        <li><i>http://localhost:proxyPort/static/app/termtest.html?address=host&port=port</i></li>
-        <li>For TN3270 over TLS: <i>http://localhost:proxyPort/static/app/termtest.html?address=host&port=port&useTLS=true</i></li>
-    </ul>
-</body></html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>TSTerm</title>
+        <link rel="stylesheet" type="text/css" href="/static/app/css/style.css">
+        <script>
+            function tryHost() {
+                var host = document.getElementById("host").value;
+                var port = document.getElementById("port").value;
+                var tls = document.getElementById("tls").value;
+                if (tls == '/') {
+                    tls = '&useTLS=true';
+                } else {
+                    tls = '';
+                }
+                window.location.href = "static/app/termtest.html?address=" + host + "&port=" + port + tls;
+            }
+        </script>
+    </head>
+    <body>
+        <h1>TSTerm Home Page</h1>
+        <p>Enter the host, port and check (if needed) TLS:</p>
+        <p>Host ===> <input id="host" type="text" size="50" value="example.com"></p>
+        <p>Port ===> <input id="port" type="text" size="10" value="23"></p>
+        <p>TLS &nbsp===> <input id="tls" type="text" size="1"> Enter "/" to select option</p>
+        <button onclick="tryHost()">Proceed</button>
+    </body>
+</html>
+
+<!--
+    This program and the accompanying materials are
+    made available under the terms of the Eclipse Public License v2.0 which accompanies
+    this distribution, and is available at https://www.eclipse.org/legal/epl-v20.html
+
+    SPDX-License-Identifier: EPL-2.0
+
+    Copyright Contributors to the Zowe Project.
+    Copyright Contributors to the Open Mainframe Project's TSTerm Project
+-->
