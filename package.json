@@ -1,5 +1,5 @@
 {
-  "name": "TSTerm",
+  "name": "TSTermZ",
   "version": "1.0.1",
   "description": "TSTerm is a software package that provides 3270 terminal functionality in a TypeScript implementation.",
   "main": "./lib/tsterm.min.js",
