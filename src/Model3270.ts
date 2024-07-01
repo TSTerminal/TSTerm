@@ -370,7 +370,7 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
 		if (0 !== attributeValue){
 		    let i = attributeValue - 240;
 		    if (3 == i || i > 4 || i < 0){
-			logger.warn("Unexpected invaild attribute type=0x" +
+			logger.warn("[ATTRIBUTE_HIGHLIGHTING] Unexpected invalid attribute type=0x" +
 			    Utils.hexString(attributeValue));
 			return { code: "753", type: "ext_highlingting", status: !1, gs: "1003" };
 		    }
@@ -381,7 +381,7 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
 		if (0 !== attributeValue){
 		    let i = attributeValue - 240;
 		    if (i > 15 || i < 0) {
-			logger.warn("Unexpected invaild attribute type=0x" +
+			logger.warn("[ATTRIBUTE_COLOR] Unexpected invalid attribute type=0x" +
 			    Utils.hexString(attributeValue));
 			return { code: "753", type: "ext_color", status: !1, gs: "1003" };
 		    }

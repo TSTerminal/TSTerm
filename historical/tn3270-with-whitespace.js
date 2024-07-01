@@ -101849,11 +101849,11 @@ tr(Xo, No, []),
         this.mn = n;
         break;
     case 65:
-        if ((0 !== n && (i = n - 240), 3 == i || i > 4 || i < 0)) return Za.warn("Unexpected invaild attribute type=0x" + Uh(n)), { code: "753", type: "ext_highlingting", status: !1, gs: "1003" };
+        if ((0 !== n && (i = n - 240), 3 == i || i > 4 || i < 0)) return Za.warn("Unexpected invalid attribute type=0x" + Uh(n)), { code: "753", type: "ext_highlingting", status: !1, gs: "1003" };
         this.wn = n;
         break;
     case 66:
-        if ((0 !== n && (i = n - 240), i > 15 || i < 0)) return Za.warn("Unexpected invaild attribute type=0x" + Uh(n)), { code: "753", type: "ext_color", status: !1, gs: "1003" };
+        if ((0 !== n && (i = n - 240), i > 15 || i < 0)) return Za.warn("Unexpected invalid attribute type=0x" + Uh(n)), { code: "753", type: "ext_color", status: !1, gs: "1003" };
         this.color = n;
         break;
     case 67:
