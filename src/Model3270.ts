@@ -366,27 +366,27 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
             case CharacterAttributes3270.ATTRIBUTE_OUTLINING:
 		this.outlining = attributeValue;
 		break;
-            case CharacterAttributes3270.ATTRIBUTE_HIGHLIGHTING:
-		if (0 !== attributeValue){
-		    let i = attributeValue - 240;
-		    if (3 == i || i > 4 || i < 0){
-			logger.warn("Unexpected invaild attribute type=0x" +
-			    Utils.hexString(attributeValue));
-			return { code: "753", type: "ext_highlingting", status: !1, gs: "1003" };
-		    }
-		}
-		this.highlighting = attributeValue;;
-                break;
-            case CharacterAttributes3270.ATTRIBUTE_COLOR:
-		if (0 !== attributeValue){
-		    let i = attributeValue - 240;
-		    if (i > 15 || i < 0) {
-			logger.warn("Unexpected invaild attribute type=0x" +
-			    Utils.hexString(attributeValue));
-			return { code: "753", type: "ext_color", status: !1, gs: "1003" };
-		    }
-		}
-		this.color = attributeValue;
+		case CharacterAttributes3270.ATTRIBUTE_HIGHLIGHTING:
+			if (attributeValue !== 0) {
+				let i = attributeValue - 240;
+				if (3 == i || i > 4 || i < 0) {
+					logger.warn("[ATTRIBUTE_HIGHLIGHTING] Unexpected invalid attribute type=0x" + Utils.hexString(attributeValue));
+					attributeValue = 0;
+					//return { code: "753", type: "ext_highlingting", status: !1, gs: "1003" };
+				}
+			}
+			this.highlighting = attributeValue;;
+		break;
+		case CharacterAttributes3270.ATTRIBUTE_COLOR:
+			if (attributeValue !== 0) {
+			let i = attributeValue - 240;
+				if (i > 15 || i < 0) {
+					logger.warn("[ATTRIBUTE_COLOR] Unexpected invalid attribute type=0x" + Utils.hexString(attributeValue));
+					attributeValue = 0;
+					// return { code: "753", type: "ext_color", status: !1, gs: "1003" };
+				}
+			}
+			this.color = attributeValue;
 		break;
             case CharacterAttributes3270.ATTRIBUTE_CHARSET:
 		this.characterSet = attributeValue;
@@ -3403,20 +3403,19 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     
     /* Pl() wants throw up some alerts for pending errors in the screen.$s map */
     Pl(){ // lc.prototype.Pl = function () {
-	this.$s &&
-            0 !== this.$s.size &&
-            setTimeout(() => {
-		this.$s.forEach((t, l) => {
-                    alert(VirtualScreen3270.Mh[t.type]);
-		}),
-		this.$s.clear();
-            }, 0);
+		let logger = Utils.protocolLogger;
+		this.$s && 0 !== this.$s.size && setTimeout(() => {
+			this.$s.forEach((t, l) => {
+				logger.debug(VirtualScreen3270.Mh[t.type]);
+			}),
+			this.$s.clear();
+		}, 0);
     }
     
     processTN3270Command(t:any){ // (lc.prototype.Kh = function (t) {
 	let logger = Utils.protocolLogger;
 	logger.debug("Processing parsed TN3270 command. ");
-	console.log("JOE command is "+JSON.stringify(t));
+	console.log("Command is " + JSON.stringify(t));
 	if (t != null){
 	    if (t.orders) logger.debug("-- Order count=" + t.orders.length);
             switch ( t.key) {
