@@ -3403,20 +3403,19 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     
     /* Pl() wants throw up some alerts for pending errors in the screen.$s map */
     Pl(){ // lc.prototype.Pl = function () {
-	this.$s &&
-            0 !== this.$s.size &&
-            setTimeout(() => {
-		this.$s.forEach((t, l) => {
-                    alert(VirtualScreen3270.Mh[t.type]);
-		}),
-		this.$s.clear();
-            }, 0);
+		let logger = Utils.protocolLogger;
+		this.$s && 0 !== this.$s.size && setTimeout(() => {
+			this.$s.forEach((t, l) => {
+				logger.debug(VirtualScreen3270.Mh[t.type]);
+			}),
+			this.$s.clear();
+		}, 0);
     }
     
     processTN3270Command(t:any){ // (lc.prototype.Kh = function (t) {
 	let logger = Utils.protocolLogger;
 	logger.debug("Processing parsed TN3270 command. ");
-	console.log("JOE command is "+JSON.stringify(t));
+	console.log("Command is " + JSON.stringify(t));
 	if (t != null){
 	    if (t.orders) logger.debug("-- Order count=" + t.orders.length);
             switch ( t.key) {
