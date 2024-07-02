@@ -366,27 +366,27 @@ class CharacterAttributes3270 extends CharacterAttributes { // minified as Xo
             case CharacterAttributes3270.ATTRIBUTE_OUTLINING:
 		this.outlining = attributeValue;
 		break;
-            case CharacterAttributes3270.ATTRIBUTE_HIGHLIGHTING:
-		if (0 !== attributeValue){
-		    let i = attributeValue - 240;
-		    if (3 == i || i > 4 || i < 0){
-			logger.warn("[ATTRIBUTE_HIGHLIGHTING] Unexpected invalid attribute type=0x" +
-			    Utils.hexString(attributeValue));
-			return { code: "753", type: "ext_highlingting", status: !1, gs: "1003" };
-		    }
-		}
-		this.highlighting = attributeValue;;
-                break;
-            case CharacterAttributes3270.ATTRIBUTE_COLOR:
-		if (0 !== attributeValue){
-		    let i = attributeValue - 240;
-		    if (i > 15 || i < 0) {
-			logger.warn("[ATTRIBUTE_COLOR] Unexpected invalid attribute type=0x" +
-			    Utils.hexString(attributeValue));
-			return { code: "753", type: "ext_color", status: !1, gs: "1003" };
-		    }
-		}
-		this.color = attributeValue;
+		case CharacterAttributes3270.ATTRIBUTE_HIGHLIGHTING:
+			if (attributeValue !== 0) {
+				let i = attributeValue - 240;
+				if (3 == i || i > 4 || i < 0) {
+					logger.warn("[ATTRIBUTE_HIGHLIGHTING] Unexpected invalid attribute type=0x" + Utils.hexString(attributeValue));
+					attributeValue = 0;
+					//return { code: "753", type: "ext_highlingting", status: !1, gs: "1003" };
+				}
+			}
+			this.highlighting = attributeValue;;
+		break;
+		case CharacterAttributes3270.ATTRIBUTE_COLOR:
+			if (attributeValue !== 0) {
+			let i = attributeValue - 240;
+				if (i > 15 || i < 0) {
+					logger.warn("[ATTRIBUTE_COLOR] Unexpected invalid attribute type=0x" + Utils.hexString(attributeValue));
+					attributeValue = 0;
+					// return { code: "753", type: "ext_color", status: !1, gs: "1003" };
+				}
+			}
+			this.color = attributeValue;
 		break;
             case CharacterAttributes3270.ATTRIBUTE_CHARSET:
 		this.characterSet = attributeValue;
