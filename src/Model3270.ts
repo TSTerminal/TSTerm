@@ -2068,7 +2068,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     su:any;
     ou:boolean;
     cu:boolean;
-    fu:boolean;
+    destructiveBackspace: boolean; // Was fu
     parser:TN3270EParser|null;
     Cu:any;
     na:any; // something to do with keepAlive
@@ -2189,7 +2189,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	this.su = { uu: !1, hu: !1, ru: !1, au: !1 };
 	this.ou = true;
 	this.cu = true;
-	this.fu = false;
+	this.destructiveBackspace = false;
 	// JOE adds these
 	this.parser = null;  // many instances of this.Du in code
 	this.Cu = null;      // many instances in code values in (2,4,88, and null)
@@ -4025,7 +4025,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	if (0 != this.cursorPos){
 	    this.modifyCursorPos(-1);
 	}
-	if (this.fu){  // *UNKNOWN* what does this.fu control?
+	if (this.destructiveBackspace) {
 	    this.Cr();
 	}
     }
@@ -4038,7 +4038,7 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
             if (t) {
 		const element2 = this.screenElements[t];
 		const l = element2 && element2.field;
-		l && ((t += l.fieldData.length - 1), Utils.protocolLogger.debug("Got editable field at " + t), this.setCursorPos(t), this.fu && this.doDelete());
+		l && ((t += l.fieldData.length - 1), Utils.protocolLogger.debug("Got editable field at " + t), this.setCursorPos(t), this.destructiveBackspace && this.doDelete());
             }
 	} else this.Nr();
     }
