@@ -2067,8 +2067,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
     eu:any;
     su:any;
     ou:boolean;
-    cu:boolean;
-    fu:boolean;
+    moveToEditable: boolean; // Was cu
+    destructiveBackspace: boolean; // Was fu
     parser:TN3270EParser|null;
     Cu:any;
     na:any; // something to do with keepAlive
@@ -2188,8 +2188,8 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	this.eu = { passwordPrompt: "password" };
 	this.su = { uu: !1, hu: !1, ru: !1, au: !1 };
 	this.ou = true;
-	this.cu = true;
-	this.fu = false;
+	this.moveToEditable = true;
+	this.destructiveBackspace = false;
 	// JOE adds these
 	this.parser = null;  // many instances of this.Du in code
 	this.Cu = null;      // many instances in code values in (2,4,88, and null)
@@ -4012,39 +4012,39 @@ export class VirtualScreen3270 extends PagedVirtualScreen {   // minified as lc
 	this.renderer && this.renderer.redrawTransientElements();
     }
     
-    Cr(){ // (lc.prototype.Cr = function () {
-	let element = this.screenElements[this.cursorPos];
-	const field = element && element.field;
-	if (field && field.fieldData.isEditable() && this.cursorPos >= field.start){
-	    this.doDelete(); // INTERIM .mr
-	}
+    deleteOnCursorPosition() { // (lc.prototype.Cr = function () {
+		let element = this.screenElements[this.cursorPos];
+		const field = element && element.field;
+		if (field && field.fieldData.isEditable() && this.cursorPos >= field.start){
+			this.doDelete(); // INTERIM .mr
+		}
     }
     
-    Nr(){ // lc.prototype.Nr = function () {
+    moveBackAndDelete() { // lc.prototype.Nr = function () {
 	// *UNKNOWN* - why does this not wrap?? 
-	if (0 != this.cursorPos){
-	    this.modifyCursorPos(-1);
-	}
-	if (this.fu){  // *UNKNOWN* what does this.fu control?
-	    this.Cr();
-	}
+		if (0 != this.cursorPos){
+			this.modifyCursorPos(-1);
+		}
+		if (this.destructiveBackspace) {
+			this.deleteOnCursorPosition();
+		}
     }
     
-    Pr(){ // lc.prototype.Pr = function () {
-	let element = this.screenElements[this.cursorPos];
-	const t = element && element.field;
-	if (!t || this.cursorPos <= t.start || !t.fieldData.isEditable()) {
-            let t = this.findMatchingEditableField(this.cursorPos, !0);
-            if (t) {
-		const element2 = this.screenElements[t];
-		const l = element2 && element2.field;
-		l && ((t += l.fieldData.length - 1), Utils.protocolLogger.debug("Got editable field at " + t), this.setCursorPos(t), this.fu && this.doDelete());
-            }
-	} else this.Nr();
+    moveToEditableField(){ // lc.prototype.Pr = function () {
+		let element = this.screenElements[this.cursorPos];
+		const t = element && element.field;
+		if (!t || this.cursorPos <= t.start || !t.fieldData.isEditable()) {
+			let t = this.findMatchingEditableField(this.cursorPos, !0);
+			if (t) {
+				const element2 = this.screenElements[t];
+				const l = element2 && element2.field;
+				l && ((t += l.fieldData.length - 1), Utils.protocolLogger.debug("Got editable field at " + t), this.setCursorPos(t), this.destructiveBackspace && this.doDelete());
+			}
+		} else this.moveBackAndDelete();
     }
 
-    handleBackspace(){// (lc.prototype.rr = function () {
-	this.cu ? this.Pr() : this.Nr();
+    handleBackspace() {// (lc.prototype.rr = function () {
+		this.moveToEditable ? this.moveToEditableField(): this.moveBackAndDelete();
     }
 
     handleHome(){//(lc.prototype.ar = function () {
